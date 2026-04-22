@@ -26,7 +26,9 @@ import {
   Layers,
   MoreHorizontal,
   FileText,
+  Fingerprint,
 } from "lucide-react";
+import { CopyIdButton } from "@/components/ui/copy-id-button";
 
 export const metadata: Metadata = {
   title: "Templates — Templit",
@@ -103,9 +105,15 @@ function TemplateCard({ template }: { template: Template }) {
       </div>
 
       <CardHeader className="pb-2 pt-3 px-4">
-        <CardTitle className="text-sm font-medium text-white truncate">
-          {template.name}
-        </CardTitle>
+        <div className="flex items-center justify-between">
+          <CardTitle className="text-sm font-medium text-white truncate max-w-[150px]">
+            {template.name}
+          </CardTitle>
+          <div className="flex items-center gap-1 group/id opacity-0 group-hover:opacity-100 transition-opacity">
+            <span className="text-[9px] font-mono text-white/20">ID: {template.id.slice(0, 8)}...</span>
+            <CopyIdButton id={template.id} label="Template ID" />
+          </div>
+        </div>
         {canvas?.width && canvas?.height && (
           <p className="text-[10px] text-white/30 font-mono mt-0.5">
             {canvas.width} × {canvas.height}px

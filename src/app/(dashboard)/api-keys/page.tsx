@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import Link from "next/link";
 import { ApiKeyManager } from "./api-key-manager";
+import { CopyIdButton } from "@/components/ui/copy-id-button";
 
 export default async function ApiKeysPage() {
   const session = await auth();
@@ -67,11 +68,20 @@ export default async function ApiKeysPage() {
       </nav>
 
       <main className="max-w-4xl mx-auto px-6 py-12">
-        <div className="mb-10">
-          <h1 className="text-4xl font-bold tracking-tight mb-3">API Keys</h1>
-          <p className="text-lg text-white/40">
-            Generate and manage access tokens for headless rendering.
-          </p>
+        <div className="mb-10 flex flex-col md:flex-row md:items-end justify-between gap-6">
+          <div>
+            <h1 className="text-4xl font-bold tracking-tight mb-3">API Keys</h1>
+            <p className="text-lg text-white/40">
+              Generate and manage access tokens for headless rendering.
+            </p>
+          </div>
+          <div className="bg-white/5 border border-white/10 rounded-xl px-4 py-3 flex items-center gap-3">
+             <div className="text-right">
+                <p className="text-[10px] uppercase tracking-widest text-white/30 font-bold">Organization ID</p>
+                <code className="text-xs text-indigo-400 font-mono">{membership.orgId}</code>
+             </div>
+             <CopyIdButton id={membership.orgId} label="Org ID" />
+          </div>
         </div>
 
         {/* Security Warning */}
