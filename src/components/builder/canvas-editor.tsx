@@ -27,6 +27,13 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
   Type,
   Square,
   Image as ImageIcon,
@@ -268,6 +275,16 @@ export default function CanvasEditor({
   template,
   onCanvasChange,
 }: CanvasEditorProps) {
+  // ── Fonts ────────────────────────────────────────────────────────────────
+  const FONTS = [
+    { name: "Inter", value: "Inter, sans-serif" },
+    { name: "Cairo (Arabic)", value: "Cairo, sans-serif" },
+    { name: "Montserrat", value: "Montserrat, sans-serif" },
+    { name: "Playfair Display", value: "Playfair Display, serif" },
+    { name: "Oswald", value: "Oswald, sans-serif" },
+    { name: "Roboto", value: "Roboto, sans-serif" },
+    { name: "Open Sans", value: "Open Sans, sans-serif" },
+  ];
   // ── State ────────────────────────────────────────────────────────────────
 
   const [canvas, setCanvas] = useState<CanvasConfig>(() => ({
@@ -748,10 +765,35 @@ export default function CanvasEditor({
               {selectedLayer.type === "text" && (
                 <>
                   <div className="space-y-1">
-                    <label className="text-xs text-white/50">Text</label>
+                    <label className="text-xs text-white/50">Font Family</label>
+                    <Select
+                      value={selectedLayer.fontFamily || "Inter, sans-serif"}
+                      onValueChange={(val) =>
+                        updateLayer(selectedLayer.id, { fontFamily: val })
+                      }
+                    >
+                      <SelectTrigger className="h-7 bg-white/5 border-white/10 text-white text-[10px]">
+                        <SelectValue placeholder="Font family" />
+                      </SelectTrigger>
+                      <SelectContent className="bg-[#121225] border-white/10 text-white">
+                        {FONTS.map((font) => (
+                          <SelectItem
+                            key={font.value}
+                            value={font.value}
+                            style={{ fontFamily: font.value }}
+                          >
+                            {font.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div className="space-y-1">
+                    <label className="text-xs text-white/50">Content</label>
                     <Input
                       id="layer-text"
-                      value={selectedLayer.text ?? ""}
+                      value={selectedLayer.text || ""}
                       onChange={(e) =>
                         updateLayer(selectedLayer.id, { text: e.target.value })
                       }
