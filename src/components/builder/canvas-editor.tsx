@@ -45,7 +45,7 @@ import {
 import type { Template } from "@/lib/db/schema";
 import { saveTemplateLayersAction } from "@/app/actions/template-actions";
 import { toast } from "sonner";
-import Mp4Renderer from "@/components/render/mp4-renderer";
+import Mp4Renderer from "@/components/renderer/mp4-renderer";
 
 // ── Types ────────────────────────────────────────────────────────────────────
 
