@@ -47,6 +47,7 @@ interface RenderConfig {
 }
 
 interface Mp4RendererProps {
+  templateName: string;
   /** The Konva Stage to capture. Pass the stage ref from CanvasEditor. */
   stageRef: React.RefObject<Konva.Stage | null>;
   config: RenderConfig;
@@ -74,6 +75,7 @@ function frameFilename(index: number): string {
 // ── Component ────────────────────────────────────────────────────────────────
 
 export default function Mp4Renderer({
+  templateName,
   stageRef,
   config,
   onComplete,

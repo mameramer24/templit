@@ -4,7 +4,7 @@ import { db } from "@/lib/db";
 import { apiKeys, orgMembers } from "@/lib/db/schema";
 import { auth } from "@/lib/auth";
 import { eq, and } from "drizzle-orm";
-import { crypto } from "node:crypto";
+import crypto from "node:crypto";
 import { revalidatePath } from "next/cache";
 
 /**

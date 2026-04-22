@@ -3,7 +3,7 @@ import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { apiKeys, orgMembers } from "@/lib/db/schema";
 import { eq } from "drizzle-orm";
-import { crypto } from "node:crypto";
+import crypto from "node:crypto";
 
 export interface ApiAuthResult {
   userId: string;

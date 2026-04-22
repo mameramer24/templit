@@ -41,6 +41,7 @@ import {
   Plus,
   Layers,
   Wand2,
+  Loader2,
 } from "lucide-react";
 import type { Template } from "@/lib/db/schema";
 import { saveTemplateLayersAction } from "@/app/actions/template-actions";
@@ -542,9 +543,13 @@ export default function CanvasEditor({
             {template.type === "video" ? (
                <Mp4Renderer 
                  templateName={template.name}
-                 width={canvas.width}
-                 height={canvas.height}
-                 layers={layers}
+                 stageRef={stageRef}
+                 config={{
+                   totalFrames: 100,
+                   fps: 30,
+                   width: canvas.width,
+                   height: canvas.height,
+                 }}
                />
             ) : (
               <Button

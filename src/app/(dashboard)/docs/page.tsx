@@ -159,9 +159,9 @@ export default function DocsPage() {
 
 function Badge({ children, variant, className }: any) {
   return (
-    <span className={\`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold \${
+    <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold ${
        variant === 'outline' ? 'border border-indigo-500/20 text-indigo-400' : 'bg-white/10 text-white'
-    } \${className}\`}>
+    } ${className}`}>
       {children}
     </span>
   );
