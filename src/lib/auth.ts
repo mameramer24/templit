@@ -1,0 +1,99 @@
+/**
+ * NextAuth.js v5 (Auth.js beta) configuration
+ *
+ * Exports: { handlers, auth, signIn, signOut }
+ *  - handlers → mount at app/api/auth/[...nextauth]/route.ts
+ *  - auth      → use in Server Components / Route Handlers to get session
+ *  - signIn / signOut → use in Server Actions or Client Components
+ */
+
+import NextAuth from "next-auth";
+import Credentials from "next-auth/providers/credentials";
+import { DrizzleAdapter } from "@auth/drizzle-adapter";
+import { eq } from "drizzle-orm";
+import bcrypt from "bcryptjs";
+import { db } from "@/lib/db/index";
+import { users } from "@/lib/db/schema";
+import type { NextAuthConfig, Session } from "next-auth";
+import type { JWT } from "next-auth/jwt";
+
+export const authConfig = {
+  // ── Adapter ────────────────────────────────────────────────────────────────
+  adapter: DrizzleAdapter(db),
+
+  // ── Session strategy ───────────────────────────────────────────────────────
+  session: { strategy: "jwt" as const },
+
+  // ── Pages ──────────────────────────────────────────────────────────────────
+  pages: {
+    signIn: "/login",
+    error: "/login",
+  },
+
+  // ── Providers ─────────────────────────────────────────────────────────────
+  providers: [
+    Credentials({
+      name: "credentials",
+      credentials: {
+        email: { label: "Email", type: "email" },
+        password: { label: "Password", type: "password" },
+      },
+
+      async authorize(credentials) {
+        if (
+          typeof credentials?.email !== "string" ||
+          typeof credentials?.password !== "string"
+        ) {
+          return null;
+        }
+
+        const [user] = await db
+          .select()
+          .from(users)
+          .where(eq(users.email, credentials.email.toLowerCase().trim()))
+          .limit(1);
+
+        if (!user?.passwordHash) return null;
+
+        const passwordValid = await bcrypt.compare(
+          credentials.password,
+          user.passwordHash
+        );
+
+        if (!passwordValid) return null;
+
+        return {
+          id: user.id,
+          email: user.email,
+          name: user.displayName ?? user.name,
+          image: user.image,
+        };
+      },
+    }),
+  ],
+
+  // ── Callbacks ─────────────────────────────────────────────────────────────
+  callbacks: {
+    async jwt({ token, user }: { token: JWT; user?: { id?: string } | null }) {
+      if (user?.id) {
+        token["userId"] = user.id;
+      }
+      return token;
+    },
+
+    async session({
+      session,
+      token,
+    }: {
+      session: Session;
+      token: JWT;
+    }) {
+      if (token["userId"] && typeof token["userId"] === "string" && session.user) {
+        session.user.id = token["userId"];
+      }
+      return session;
+    },
+  },
+} satisfies NextAuthConfig;
+
+export const { handlers, auth, signIn, signOut } = NextAuth(authConfig);
