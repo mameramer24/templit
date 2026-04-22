@@ -52,19 +52,39 @@ export const memberRoleEnum = pgEnum("member_role", [
   "member",
 ]);
 
+/**
+ * Platform-level role — scoped to the entire Templit installation.
+ *  superadmin → full access to all orgs, users, and platform settings
+ *  admin      → elevated access (future use)
+ *  user       → normal tenant account
+ */
+export const userRoleEnum = pgEnum("user_role", [
+  "user",
+  "admin",
+  "superadmin",
+]);
+
+export type UserRole = (typeof userRoleEnum.enumValues)[number];
+
 // ─── users ────────────────────────────────────────────────────────────────────
 
-export const users = pgTable("users", {
-  id: uuid("id").primaryKey().defaultRandom(),
-  name: text("name"),
-  email: text("email").notNull().unique(),
-  emailVerified: timestamp("email_verified", { mode: "date" }),
-  image: text("image"),
-  passwordHash: text("password_hash"), // null for OAuth-only accounts
-  displayName: varchar("display_name", { length: 100 }),
-  createdAt: timestamp("created_at", { mode: "date" }).notNull().defaultNow(),
-  updatedAt: timestamp("updated_at", { mode: "date" }).notNull().defaultNow(),
-});
+export const users = pgTable(
+  "users",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    name: text("name"),
+    email: text("email").notNull().unique(),
+    emailVerified: timestamp("email_verified", { mode: "date" }),
+    image: text("image"),
+    passwordHash: text("password_hash"), // null for OAuth-only accounts
+    displayName: varchar("display_name", { length: 100 }),
+    /** Platform-level role. Checked by proxy.ts and API routes. */
+    role: userRoleEnum("role").notNull().default("user"),
+    createdAt: timestamp("created_at", { mode: "date" }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { mode: "date" }).notNull().defaultNow(),
+  },
+  (table) => [index("user_role_idx").on(table.role)]
+);
 
 // ─── accounts (Auth.js adapter requirement) ───────────────────────────────────
 
