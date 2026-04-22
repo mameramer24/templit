@@ -290,9 +290,20 @@ export default function CanvasEditor({
     { name: "Roboto", value: "Roboto, sans-serif" },
     { name: "Open Sans", value: "Open Sans, sans-serif" },
   ];
+
+  const SIZE_PRESETS = [
+    { name: "Custom", width: 0, height: 0 },
+    { name: "Instagram Post", width: 1080, height: 1080 },
+    { name: "Instagram Story", width: 1080, height: 1920 },
+    { name: "YouTube Thumbnail", width: 1280, height: 720 },
+    { name: "Facebook Post", width: 1200, height: 630 },
+    { name: "Twitter Header", width: 1500, height: 500 },
+    { name: "Full HD", width: 1920, height: 1080 },
+  ];
   // ── State ────────────────────────────────────────────────────────────────
 
   const [scale, setScale] = useState(1);
+  const [stagePos, setStagePos] = useState({ x: 0, y: 0 });
   const [activeTab, setActiveTab] = useState<"layers" | "assets">("layers");
 
   const PLACEHOLDERS = {
@@ -614,7 +625,10 @@ export default function CanvasEditor({
               variant="ghost" 
               size="icon" 
               className="h-7 w-7 text-white/50 hover:text-white hover:bg-white/10" 
-              onClick={() => setScale(1)}
+              onClick={() => {
+                setScale(1);
+                setStagePos({ x: 0, y: 0 });
+              }}
               title="Reset Zoom"
             >
               <Maximize className="h-3.5 w-3.5" />
@@ -685,15 +699,38 @@ export default function CanvasEditor({
               height={600} // Visible container height
               scaleX={scale}
               scaleY={scale}
+              x={stagePos.x}
+              y={stagePos.y}
               draggable
+              onDragEnd={(e) => {
+                setStagePos({ x: e.target.x(), y: e.target.y() });
+              }}
               onWheel={(e) => {
                 e.evt.preventDefault();
-                const oldScale = scale;
-                const pointer = e.target.getStage()?.getPointerPosition();
+                const stage = stageRef.current;
+                if (!stage) return;
+
+                const oldScale = stage.scaleX();
+                const pointer = stage.getPointerPosition();
                 if (!pointer) return;
 
-                const newScale = e.evt.deltaY > 0 ? oldScale * 0.9 : oldScale * 1.1;
-                setScale(Math.max(0.1, Math.min(3, newScale)));
+                const mousePointTo = {
+                  x: (pointer.x - stage.x()) / oldScale,
+                  y: (pointer.y - stage.y()) / oldScale,
+                };
+
+                const scaleBy = 1.1;
+                const newScale = e.evt.deltaY > 0 ? oldScale / scaleBy : oldScale * scaleBy;
+                const clampedScale = Math.max(0.05, Math.min(5, newScale));
+                
+                setScale(clampedScale);
+
+                const newPos = {
+                  x: pointer.x - mousePointTo.x * clampedScale,
+                  y: pointer.y - mousePointTo.y * clampedScale,
+                };
+                
+                setStagePos(newPos);
               }}
               style={{ cursor: "default" }}
               onMouseDown={(e) => {
@@ -754,34 +791,60 @@ export default function CanvasEditor({
             /* Canvas properties */
             <>
               <div className="space-y-1">
-                <label className="text-xs text-white/50">Width</label>
-                <Input
-                  id="canvas-width"
-                  type="number"
-                  value={canvas.width}
-                  onChange={(e) =>
-                    setCanvas((c) => ({
-                      ...c,
-                      width: parseInt(e.target.value) || c.width,
-                    }))
-                  }
-                  className="h-7 bg-white/5 border-white/10 text-white text-xs"
-                />
+                <label className="text-xs text-white/50">Size Preset</label>
+                <Select
+                  value={SIZE_PRESETS.find(p => p.width === canvas.width && p.height === canvas.height)?.name || "Custom"}
+                  onValueChange={(val) => {
+                    const preset = SIZE_PRESETS.find(p => p.name === val);
+                    if (preset && preset.name !== "Custom") {
+                      setCanvas(c => ({ ...c, width: preset.width, height: preset.height }));
+                    }
+                  }}
+                >
+                  <SelectTrigger className="h-7 bg-white/5 border-white/10 text-white text-[10px]">
+                    <SelectValue placeholder="Select preset" />
+                  </SelectTrigger>
+                  <SelectContent className="bg-[#121225] border-white/10 text-white">
+                    {SIZE_PRESETS.map((p) => (
+                      <SelectItem key={p.name} value={p.name}>
+                        {p.name} {p.width > 0 ? `(${p.width}x${p.height})` : ""}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
-              <div className="space-y-1">
-                <label className="text-xs text-white/50">Height</label>
-                <Input
-                  id="canvas-height"
-                  type="number"
-                  value={canvas.height}
-                  onChange={(e) =>
-                    setCanvas((c) => ({
-                      ...c,
-                      height: parseInt(e.target.value) || c.height,
-                    }))
-                  }
-                  className="h-7 bg-white/5 border-white/10 text-white text-xs"
-                />
+
+              <div className="grid grid-cols-2 gap-2">
+                <div className="space-y-1">
+                  <label className="text-xs text-white/50">Width</label>
+                  <Input
+                    id="canvas-width"
+                    type="number"
+                    value={canvas.width}
+                    onChange={(e) =>
+                      setCanvas((c) => ({
+                        ...c,
+                        width: parseInt(e.target.value) || c.width,
+                      }))
+                    }
+                    className="h-7 bg-white/5 border-white/10 text-white text-xs"
+                  />
+                </div>
+                <div className="space-y-1">
+                  <label className="text-xs text-white/50">Height</label>
+                  <Input
+                    id="canvas-height"
+                    type="number"
+                    value={canvas.height}
+                    onChange={(e) =>
+                      setCanvas((c) => ({
+                        ...c,
+                        height: parseInt(e.target.value) || c.height,
+                      }))
+                    }
+                    className="h-7 bg-white/5 border-white/10 text-white text-xs"
+                  />
+                </div>
               </div>
               <div className="space-y-1">
                 <label className="text-xs text-white/50">Background</label>

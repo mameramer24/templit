@@ -162,7 +162,11 @@ export function ApiKeyManager({ initialKeys }: ApiKeyManagerProps) {
 
       {/* Secret Display Dialog */}
       <Dialog open={showDialog} onOpenChange={setShowDialog}>
-        <DialogContent className="bg-[#121225] border-white/10 text-white max-w-md">
+        <DialogContent 
+           className="bg-[#121225] border-white/10 text-white max-w-md"
+           onPointerDownOutside={(e) => e.preventDefault()}
+           onEscapeKeyDown={(e) => e.preventDefault()}
+        >
           <DialogHeader>
             <DialogTitle className="text-2xl font-bold flex items-center gap-2 text-emerald-400">
                <CheckCircle2 className="h-6 w-6" />
@@ -170,6 +174,8 @@ export function ApiKeyManager({ initialKeys }: ApiKeyManagerProps) {
             </DialogTitle>
             <DialogDescription className="text-white/40 pt-2">
               Please copy your API key now. You won&apos;t be able to see it again for security reasons.
+              <br/>
+              يرجى نسخ المفتاح الآن، لن تتمكن من رؤيته مرة أخرى لدواعي أمنية.
             </DialogDescription>
           </DialogHeader>
 
