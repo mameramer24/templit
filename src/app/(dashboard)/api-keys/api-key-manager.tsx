@@ -27,6 +27,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { CopyIdButton } from "@/components/ui/copy-id-button";
 
 interface ApiKeyManagerProps {
   initialKeys: ApiKey[];
@@ -136,9 +137,15 @@ export function ApiKeyManager({ initialKeys }: ApiKeyManagerProps) {
               </div>
 
               <div className="flex items-center gap-3">
-                 <Badge variant="outline" className="bg-emerald-500/10 text-emerald-400 border-emerald-500/20 py-1">
-                    Active
-                 </Badge>
+                 <div className="flex flex-col items-end gap-1 mr-2">
+                    <Badge variant="outline" className="bg-emerald-500/10 text-emerald-400 border-emerald-500/20 py-1">
+                        Active
+                    </Badge>
+                    <div className="flex items-center gap-1 opacity-40 hover:opacity-100 transition-opacity">
+                      <span className="text-[10px] font-mono">ID: {key.id.slice(0, 8)}</span>
+                      <CopyIdButton id={key.id} label="Key ID" />
+                    </div>
+                 </div>
                  <Button 
                     variant="ghost" 
                     size="sm" 

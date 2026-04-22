@@ -49,6 +49,11 @@ import {
   Layers,
   Wand2,
   Loader2,
+  Search,
+  ZoomIn,
+  ZoomOut,
+  Maximize,
+  Library,
 } from "lucide-react";
 import type { Template } from "@/lib/db/schema";
 import { saveTemplateLayersAction } from "@/app/actions/template-actions";
@@ -287,6 +292,40 @@ export default function CanvasEditor({
   ];
   // ── State ────────────────────────────────────────────────────────────────
 
+  const [scale, setScale] = useState(1);
+  const [activeTab, setActiveTab] = useState<"layers" | "assets">("layers");
+
+  const PLACEHOLDERS = {
+    images: [
+      { name: "Avatar", url: "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=200&auto=format&fit=crop&q=60" },
+      { name: "Background", url: "https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=800&auto=format&fit=crop&q=60" },
+      { name: "Product", url: "https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=400&auto=format&fit=crop&q=60" },
+      { name: "Workspace", url: "https://images.unsplash.com/photo-1497215728101-856f4ea42174?w=800&auto=format&fit=crop&q=60" },
+    ]
+  };
+
+  const handleAddImage = (url: string) => {
+    const img = new window.Image();
+    img.src = url;
+    img.onload = () => {
+      const newLayer: CanvasLayer = {
+        id: generateId(),
+        type: "image",
+        x: (canvas.width / 2) - 100,
+        y: (canvas.height / 2) - 100,
+        width: 200,
+        height: (200 * img.height) / img.width,
+        rotation: 0,
+        opacity: 1,
+        locked: false,
+        visible: true,
+        src: url,
+      };
+      setLayers([...layers, newLayer]);
+      setSelectedLayerId(newLayer.id);
+    };
+  };
+
   const [canvas, setCanvas] = useState<CanvasConfig>(() => ({
     width: (template?.canvas as CanvasConfig | null | undefined)?.width ?? 1200,
     height: (template?.canvas as CanvasConfig | null | undefined)?.height ?? 630,
@@ -414,66 +453,87 @@ export default function CanvasEditor({
   return (
     <div className="flex h-screen bg-[#0f0f1a] text-white overflow-hidden">
       {/* ── LEFT: Layer Panel ─────────────────────────────────────────── */}
-      <aside className="w-56 flex-shrink-0 bg-[#16162a] border-r border-white/10 flex flex-col">
-        <div className="p-3 border-b border-white/10 flex items-center gap-2">
-          <Layers className="h-4 w-4 text-indigo-400" />
-          <span className="text-sm font-semibold text-white/80">Layers</span>
+      <aside className="w-64 border-r border-white/10 bg-[#0f0f1a] flex flex-col">
+        <div className="p-3 border-b border-white/10 flex gap-2">
+          <Button
+            size="sm"
+            variant={activeTab === "layers" ? "secondary" : "ghost"}
+            className="flex-1 text-[11px] gap-2"
+            onClick={() => setActiveTab("layers")}
+          >
+            <Layers className="h-3.5 w-3.5" />
+            Layers
+          </Button>
+          <Button
+            size="sm"
+            variant={activeTab === "assets" ? "secondary" : "ghost"}
+            className="flex-1 text-[11px] gap-2"
+            onClick={() => setActiveTab("assets")}
+          >
+            <Library className="h-3.5 w-3.5" />
+            Assets
+          </Button>
         </div>
 
-        <div className="flex-1 overflow-y-auto p-2 space-y-1">
-          {[...layers].reverse().map((layer) => (
-            <button
-              key={layer.id}
-              id={`layer-btn-${layer.id}`}
-              onClick={() =>
-                setSelectedId(selectedId === layer.id ? null : layer.id)
-              }
-              className={`w-full flex items-center gap-2 px-2 py-1.5 rounded-md text-xs transition-colors ${
-                selectedId === layer.id
-                  ? "bg-indigo-600/50 text-white"
-                  : "text-white/60 hover:bg-white/5 hover:text-white"
-              }`}
-            >
-              <span className="flex-1 truncate text-left">
-                {layer.type === "text"
-                  ? layer.text?.slice(0, 18) ?? "Text"
-                  : `${layer.type} ${layer.id.slice(-4)}`}
-              </span>
-              <button
-                id={`visibility-btn-${layer.id}`}
-                onClick={(e) => {
-                  e.stopPropagation();
-                  toggleLayerProp(layer.id, "visible");
-                }}
-                className="opacity-50 hover:opacity-100"
-              >
-                {layer.visible ? (
-                  <Eye className="h-3 w-3" />
-                ) : (
-                  <EyeOff className="h-3 w-3" />
-                )}
-              </button>
-              <button
-                id={`lock-btn-${layer.id}`}
-                onClick={(e) => {
-                  e.stopPropagation();
-                  toggleLayerProp(layer.id, "locked");
-                }}
-                className="opacity-50 hover:opacity-100"
-              >
-                {layer.locked ? (
-                  <Lock className="h-3 w-3" />
-                ) : (
-                  <Unlock className="h-3 w-3" />
-                )}
-              </button>
-            </button>
-          ))}
-
-          {layers.length === 0 && (
-            <p className="text-xs text-white/30 text-center p-4">
-              No layers yet. Add one from the toolbar.
-            </p>
+        <div className="flex-1 overflow-y-auto">
+          {activeTab === "layers" ? (
+            <div className="p-3 space-y-1">
+              {layers.slice().reverse().map((l) => (
+                <div
+                  key={l.id}
+                  className={`group flex items-center justify-between p-2 rounded-lg cursor-pointer transition-colors ${
+                    selectedId === l.id ? "bg-indigo-600/20 text-indigo-400 border border-indigo-500/30" : "text-white/50 hover:bg-white/5"
+                  }`}
+                  onClick={() => setSelectedId(l.id)}
+                >
+                  <div className="flex items-center gap-2 max-w-[120px]">
+                    {l.type === "text" ? <Type className="h-3.5 w-3.5" /> : l.type === "rect" ? <Square className="h-3.5 w-3.5" /> : <ImageIcon className="h-3.5 w-3.5" />}
+                    <span className="text-xs truncate font-medium">
+                      {l.name || (l.type === "text" ? l.text : l.type)}
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-1">
+                    <button onClick={(e) => { e.stopPropagation(); updateLayer(l.id, { visible: !l.visible }); }} className="p-1 hover:text-white">
+                      {l.visible ? <Eye className="h-3 w-3" /> : <EyeOff className="h-3 w-3" />}
+                    </button>
+                    <button onClick={(e) => { e.stopPropagation(); updateLayer(l.id, { locked: !l.locked }); }} className="p-1 hover:text-white">
+                      {l.locked ? <Lock className="h-3 w-3 text-amber-500" /> : <Unlock className="h-3 w-3" />}
+                    </button>
+                    <button onClick={(e) => { e.stopPropagation(); setLayers(layers.filter(x => x.id !== l.id)); }} className="p-1 hover:text-red-400 opacity-0 group-hover:opacity-100">
+                      <Trash2 className="h-3 w-3" />
+                    </button>
+                  </div>
+                </div>
+              ))}
+              {layers.length === 0 && <p className="text-xs text-white/20 text-center py-8">No layers yet</p>}
+            </div>
+          ) : (
+            <div className="p-4 space-y-6">
+               <div>
+                  <h4 className="text-[10px] uppercase tracking-widest text-white/30 font-bold mb-3">Placeholders</h4>
+                  <div className="grid grid-cols-2 gap-3">
+                     {PLACEHOLDERS.images.map((img) => (
+                        <div 
+                          key={img.name}
+                          onClick={() => handleAddImage(img.url)}
+                          className="group relative h-24 bg-white/5 border border-white/10 rounded-lg overflow-hidden cursor-pointer hover:border-indigo-500/50 transition-all"
+                        >
+                           {/* eslint-disable-next-line @next/next/no-img-element */}
+                           <img src={img.url} alt={img.name} className="w-full h-full object-cover opacity-50 group-hover:opacity-80 transition-opacity" />
+                           <div className="absolute inset-0 flex items-center justify-center p-2">
+                              <span className="text-[9px] font-bold text-white bg-black/60 px-1.5 py-0.5 rounded backdrop-blur-sm truncate">
+                                 {img.name}
+                              </span>
+                           </div>
+                        </div>
+                     ))}
+                  </div>
+               </div>
+               
+               <div className="pt-4 border-t border-white/5">
+                  <p className="text-[10px] text-white/20 italic">More professional assets coming soon...</p>
+               </div>
+            </div>
           )}
         </div>
       </aside>
@@ -527,6 +587,39 @@ export default function CanvasEditor({
           >
             <Redo2 className="h-4 w-4" />
           </Button>
+
+          <Separator orientation="vertical" className="h-6 bg-white/10" />
+
+          <div className="flex items-center gap-1 bg-white/5 rounded-lg p-0.5">
+            <Button 
+              variant="ghost" 
+              size="icon" 
+              className="h-7 w-7 text-white/50 hover:text-white hover:bg-white/10" 
+              onClick={() => setScale(s => Math.max(0.1, s - 0.1))}
+            >
+              <ZoomOut className="h-3.5 w-3.5" />
+            </Button>
+            <div className="px-2 text-[10px] font-mono text-white/40 min-w-[40px] text-center">
+              {Math.round(scale * 100)}%
+            </div>
+            <Button 
+              variant="ghost" 
+              size="icon" 
+              className="h-7 w-7 text-white/50 hover:text-white hover:bg-white/10" 
+              onClick={() => setScale(s => Math.min(3, s + 0.1))}
+            >
+              <ZoomIn className="h-3.5 w-3.5" />
+            </Button>
+            <Button 
+              variant="ghost" 
+              size="icon" 
+              className="h-7 w-7 text-white/50 hover:text-white hover:bg-white/10" 
+              onClick={() => setScale(1)}
+              title="Reset Zoom"
+            >
+              <Maximize className="h-3.5 w-3.5" />
+            </Button>
+          </div>
 
           <div className="ml-auto flex items-center gap-2">
             {selectedId && (
@@ -588,8 +681,20 @@ export default function CanvasEditor({
             <Stage
               id="konva-stage"
               ref={stageRef}
-              width={canvas.width}
-              height={canvas.height}
+              width={800} // Visible container width
+              height={600} // Visible container height
+              scaleX={scale}
+              scaleY={scale}
+              draggable
+              onWheel={(e) => {
+                e.evt.preventDefault();
+                const oldScale = scale;
+                const pointer = e.target.getStage()?.getPointerPosition();
+                if (!pointer) return;
+
+                const newScale = e.evt.deltaY > 0 ? oldScale * 0.9 : oldScale * 1.1;
+                setScale(Math.max(0.1, Math.min(3, newScale)));
+              }}
               style={{ cursor: "default" }}
               onMouseDown={(e) => {
                 // Deselect when clicking on empty stage area
