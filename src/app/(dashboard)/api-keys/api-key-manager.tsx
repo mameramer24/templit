@@ -161,11 +161,14 @@ export function ApiKeyManager({ initialKeys }: ApiKeyManagerProps) {
       </div>
 
       {/* Secret Display Dialog */}
-      <Dialog open={showDialog} onOpenChange={setShowDialog}>
+      <Dialog 
+        open={showDialog} 
+        onOpenChange={setShowDialog}
+        disablePointerDismissal={true}
+        disableEscapeDismissal={true}
+      >
         <DialogContent 
            className="bg-[#121225] border-white/10 text-white max-w-md"
-           onPointerDownOutside={(e) => e.preventDefault()}
-           onEscapeKeyDown={(e) => e.preventDefault()}
         >
           <DialogHeader>
             <DialogTitle className="text-2xl font-bold flex items-center gap-2 text-emerald-400">
