@@ -18,6 +18,8 @@ export async function createTemplateAction(formData: FormData) {
 
   const name = formData.get("name") as string;
   const type = (formData.get("type") as "image" | "video") || "image";
+  const width = parseInt(formData.get("width") as string) || 1200;
+  const height = parseInt(formData.get("height") as string) || 630;
 
   if (!name) throw new Error("Template name is required");
 
@@ -36,7 +38,7 @@ export async function createTemplateAction(formData: FormData) {
     orgId: membership.orgId,
     createdBy: session.user.id,
     status: "draft",
-    canvas: { width: 1200, height: 630, background: "#ffffff" },
+    canvas: { width, height, background: "#ffffff" },
     layers: [],
   }).returning();
 

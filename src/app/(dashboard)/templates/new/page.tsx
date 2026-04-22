@@ -14,13 +14,25 @@ import { toast } from "sonner";
 
 export default function NewTemplatePage() {
   const router = useRouter();
-  const [loading, setLoading] = useState(false);
+  const [dimensions, setDimensions] = useState({ width: 1200, height: 630 });
+
+  const PRESETS = [
+    { name: "Instagram Story", width: 1080, height: 1920 },
+    { name: "Instagram Post", width: 1080, height: 1080 },
+    { name: "YouTube Thumbnail", width: 1280, height: 720 },
+    { name: "Full HD Video", width: 1920, height: 1080 },
+    { name: "Facebook Post", width: 1200, height: 630 },
+  ];
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     setLoading(true);
 
     const formData = new FormData(e.currentTarget);
+    // Ensure accurate dimensions are sent
+    formData.set("width", dimensions.width.toString());
+    formData.set("height", dimensions.height.toString());
+
     try {
       const result = await createTemplateAction(formData);
       toast.success("Template created!");
@@ -32,7 +44,7 @@ export default function NewTemplatePage() {
   }
 
   return (
-    <div className="p-8 max-w-2xl mx-auto">
+    <div className="p-8 max-w-2xl mx-auto pb-24">
       <Link 
         href="/templates" 
         className="inline-flex items-center gap-2 text-sm text-white/40 hover:text-white transition-colors mb-8"
@@ -62,52 +74,80 @@ export default function NewTemplatePage() {
               <Input
                 id="name"
                 name="name"
-                placeholder="e.g. Instagram Story Advertisement"
+                placeholder="e.g. Ad Campaign #1"
                 required
                 className="bg-white/5 border-white/10 h-12 text-lg focus:ring-indigo-500"
               />
             </div>
 
-            <div className="space-y-2">
-              <Label className="text-sm font-medium text-white/70">
-                Rendering Type
-              </Label>
-              <Select name="type" defaultValue="image">
-                <SelectTrigger className="bg-white/5 border-white/10 h-14">
-                  <SelectValue placeholder="Select type" />
-                </SelectTrigger>
-                <SelectContent className="bg-[#121225] border-white/10 text-white">
-                  <SelectItem value="image" className="py-3">
-                    <div className="flex items-center gap-3">
-                      <div className="h-8 w-8 rounded-lg bg-emerald-500/10 flex items-center justify-center">
-                        <ImageIcon className="h-5 w-5 text-emerald-400" />
-                      </div>
-                      <div>
-                        <p className="font-medium">Static Image</p>
-                        <p className="text-[10px] text-white/40">PNG/JPEG exports (fast)</p>
-                      </div>
-                    </div>
-                  </SelectItem>
-                  <SelectItem value="video" className="py-3">
-                    <div className="flex items-center gap-3">
-                      <div className="h-8 w-8 rounded-lg bg-indigo-500/10 flex items-center justify-center">
-                        <Video className="h-5 w-5 text-indigo-400" />
-                      </div>
-                      <div>
-                        <p className="font-medium">Animated Video</p>
-                        <p className="text-[10px] text-white/40">MP4 export using FFmpeg.wasm</p>
-                      </div>
-                    </div>
-                  </SelectItem>
-                </SelectContent>
-              </Select>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label className="text-sm font-medium text-white/70">
+                  Type
+                </Label>
+                <Select name="type" defaultValue="image">
+                  <SelectTrigger className="bg-white/5 border-white/10 h-12">
+                    <SelectValue placeholder="Select type" />
+                  </SelectTrigger>
+                  <SelectContent className="bg-[#121225] border-white/10 text-white">
+                    <SelectItem value="image">Static Image</SelectItem>
+                    <SelectItem value="video">Animated Video</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="space-y-2">
+                <Label className="text-sm font-medium text-white/70">
+                  Size Preset
+                </Label>
+                <Select 
+                  onValueChange={(val) => {
+                    if (val === "custom") return;
+                    const preset = PRESETS.find(p => p.name === val);
+                    if (preset) setDimensions({ width: preset.width, height: preset.height });
+                  }}
+                >
+                  <SelectTrigger className="bg-white/5 border-white/10 h-12">
+                    <SelectValue placeholder="Social Presets" />
+                  </SelectTrigger>
+                  <SelectContent className="bg-[#121225] border-white/10 text-white">
+                    {PRESETS.map((p) => (
+                      <SelectItem key={p.name} value={p.name}>
+                        {p.name} ({p.width}x{p.height})
+                      </SelectItem>
+                    ))}
+                    <SelectItem value="custom">Custom Size</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+               <div className="space-y-2">
+                  <Label className="text-xs text-white/40 uppercase tracking-widest">Width (px)</Label>
+                  <Input 
+                    type="number"
+                    value={dimensions.width}
+                    onChange={(e) => setDimensions({ ...dimensions, width: parseInt(e.target.value) || 0 })}
+                    className="bg-white/5 border-white/10 h-12 font-mono text-indigo-400"
+                  />
+               </div>
+               <div className="space-y-2">
+                  <Label className="text-xs text-white/40 uppercase tracking-widest">Height (px)</Label>
+                  <Input 
+                    type="number"
+                    value={dimensions.height}
+                    onChange={(e) => setDimensions({ ...dimensions, height: parseInt(e.target.value) || 0 })}
+                    className="bg-white/5 border-white/10 h-12 font-mono text-indigo-400"
+                  />
+               </div>
             </div>
 
             <div className="pt-4">
               <Button
                 type="submit"
                 disabled={loading}
-                className="w-full bg-indigo-600 hover:bg-indigo-500 h-14 text-lg font-bold shadow-lg shadow-indigo-500/20"
+                className="w-full bg-indigo-600 hover:bg-indigo-500 h-14 text-lg font-bold shadow-lg shadow-indigo-500/20 active:scale-[0.98] transition-all"
               >
                 {loading ? (
                   <>
