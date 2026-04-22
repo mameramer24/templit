@@ -40,8 +40,12 @@ import {
   Download,
   Plus,
   Layers,
+  Wand2,
 } from "lucide-react";
 import type { Template } from "@/lib/db/schema";
+import { saveTemplateLayersAction } from "@/app/actions/template-actions";
+import { toast } from "sonner";
+import Mp4Renderer from "@/components/render/mp4-renderer";
 
 // ── Types ────────────────────────────────────────────────────────────────────
 
@@ -78,9 +82,9 @@ interface CanvasConfig {
 }
 
 interface CanvasEditorProps {
-  /** Initial template data (optional — new template if undefined) */
-  template?: Pick<Template, "canvas" | "layers" | "name">;
-  /** Called whenever canvas state changes */
+  /** The full template record from the DB */
+  template: Template;
+  /** Called whenever canvas state changes (local) */
   onCanvasChange?: (canvas: CanvasConfig, layers: CanvasLayer[]) => void;
 }
 
@@ -283,6 +287,20 @@ export default function CanvasEditor({
   const [historyIdx, setHistoryIdx] = useState(0);
 
   const stageRef = useRef<Konva.Stage>(null);
+  const [isSaving, setIsSaving] = useState(false);
+
+  async function handleSave() {
+    if (!template) return;
+    setIsSaving(true);
+    try {
+      await saveTemplateLayersAction(template.id, canvas, layers);
+      toast.success("Design saved successfully!");
+    } catch (err: any) {
+      toast.error(err.message || "Failed to save design");
+    } finally {
+      setIsSaving(false);
+    }
+  }
 
   // ── History helpers ───────────────────────────────────────────────────────
 
@@ -505,15 +523,40 @@ export default function CanvasEditor({
                 Delete
               </Button>
             )}
+
             <Button
-              id="export-png-btn"
               size="sm"
-              onClick={exportPng}
-              className="bg-indigo-600 hover:bg-indigo-500 text-white"
+              variant="outline"
+              onClick={handleSave}
+              disabled={isSaving}
+              className="border-white/10 text-white hover:bg-white/5"
             >
-              <Download className="h-4 w-4 mr-1" />
-              Export PNG
+              {isSaving ? (
+                <Loader2 className="h-4 w-4 animate-spin mr-1" />
+              ) : (
+                <Wand2 className="h-4 w-4 mr-1" />
+              )}
+              Save
             </Button>
+
+            {template.type === "video" ? (
+               <Mp4Renderer 
+                 templateName={template.name}
+                 width={canvas.width}
+                 height={canvas.height}
+                 layers={layers}
+               />
+            ) : (
+              <Button
+                id="export-png-btn"
+                size="sm"
+                onClick={exportPng}
+                className="bg-indigo-600 hover:bg-indigo-500 text-white"
+              >
+                <Download className="h-4 w-4 mr-1" />
+                Export PNG
+              </Button>
+            )}
           </div>
         </div>
 

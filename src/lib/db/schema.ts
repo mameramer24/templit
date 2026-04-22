@@ -347,6 +347,35 @@ export const renderJobsRelations = relations(renderJobs, ({ one }) => ({
   }),
 }));
 
+// ─── api_keys ────────────────────────────────────────────────────────────────
+
+export const apiKeys = pgTable(
+  "api_keys",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    name: varchar("name", { length: 100 }).notNull(),
+    /** The hashed version of the API key for security (never store raw keys) */
+    keyHash: text("key_hash").notNull().unique(),
+    userId: uuid("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    orgId: uuid("org_id")
+      .notNull()
+      .references(() => organizations.id, { onDelete: "cascade" }),
+    lastUsedAt: timestamp("last_used_at", { mode: "date" }),
+    createdAt: timestamp("created_at", { mode: "date" }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { mode: "date" }).notNull().defaultNow(),
+  },
+  (table) => [
+    index("apikey_user_idx").on(table.userId),
+    index("apikey_org_idx").on(table.orgId),
+    index("apikey_hash_idx").on(table.keyHash),
+  ]
+);
+
+export type ApiKey = typeof apiKeys.$inferSelect;
+export type NewApiKey = typeof apiKeys.$inferInsert;
+
 // ─── Type exports (inferred from schema) ──────────────────────────────────────
 
 export type User = typeof users.$inferSelect;

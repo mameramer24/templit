@@ -178,6 +178,27 @@ export default async function TemplatesPage() {
             <span className="font-bold text-white">templit</span>
           </Link>
 
+          <div className="flex items-center gap-6 ml-8">
+            <Link
+              href="/templates"
+              className="text-sm font-medium text-white hover:text-indigo-400 transition-colors"
+            >
+              Templates
+            </Link>
+            <Link
+              href="/api-keys"
+              className="text-sm font-medium text-white/50 hover:text-white transition-colors"
+            >
+              API Keys
+            </Link>
+            <Link
+              href="/docs"
+              className="text-sm font-medium text-white/50 hover:text-white transition-colors"
+            >
+              Docs
+            </Link>
+          </div>
+
           <div className="ml-auto flex items-center gap-3">
             <span className="text-xs text-white/40">
               {session.user.name ?? session.user.email}
