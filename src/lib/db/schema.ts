@@ -80,10 +80,15 @@ export const users = pgTable(
     displayName: varchar("display_name", { length: 100 }),
     /** Platform-level role. Checked by proxy.ts and API routes. */
     role: userRoleEnum("role").notNull().default("user"),
+    /** Suspends login and API access if true. */
+    isBlocked: boolean("is_blocked").notNull().default(false),
     createdAt: timestamp("created_at", { mode: "date" }).notNull().defaultNow(),
     updatedAt: timestamp("updated_at", { mode: "date" }).notNull().defaultNow(),
   },
-  (table) => [index("user_role_idx").on(table.role)]
+  (table) => [
+    index("user_role_idx").on(table.role),
+    index("user_blocked_idx").on(table.isBlocked),
+  ]
 );
 
 // ─── accounts (Auth.js adapter requirement) ───────────────────────────────────

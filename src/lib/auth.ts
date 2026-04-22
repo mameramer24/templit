@@ -56,6 +56,11 @@ export const authConfig = {
 
         if (!user?.passwordHash) return null;
 
+        // ❌ Check if account is suspended
+        if (user.isBlocked) {
+          throw new Error("account_blocked");
+        }
+
         const passwordValid = await bcrypt.compare(
           credentials.password,
           user.passwordHash
