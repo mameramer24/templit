@@ -33,17 +33,17 @@ export async function generateApiKeyAction(name: string) {
   // Hash the key using SHA-256 for storage
   const keyHash = crypto.createHash("sha256").update(rawKey).digest("hex");
 
-  await db.insert(apiKeys).values({
+  const [insertedKey] = await db.insert(apiKeys).values({
     name,
     keyHash,
     userId: session.user.id,
     orgId: membership.orgId,
-  });
+  }).returning();
 
   revalidatePath("/api-keys");
 
-  // Return the raw key to the client for one-time display
-  return { rawKey };
+  // Return the raw key to the client for one-time display, plus the metadata
+  return { rawKey, apiKey: insertedKey };
 }
 
 /**

@@ -47,13 +47,13 @@ export function ApiKeyManager({ initialKeys }: ApiKeyManagerProps) {
     const name = formData.get("name") as string;
 
     try {
-      const { rawKey } = await generateApiKeyAction(name);
+      const { rawKey, apiKey } = await generateApiKeyAction(name);
       setNewKeyRaw(rawKey);
       setShowDialog(true);
-      // Note: revalidatePath in action will refresh initialKeys if we were using server components fully,
-      // but here we just refresh our local state for instant feedback if we had a full list update.
-      // For simplicity, we just assume the user will refresh or we could re-fetch.
-      window.location.reload(); // Refresh to see the new key metadata
+      // Add the new key to local state for immediate feedback without reload
+      if (apiKey) {
+        setKeys(prev => [apiKey, ...prev]);
+      }
     } catch (err: any) {
       toast.error(err.message || "Failed to create key");
     } finally {
