@@ -169,20 +169,30 @@ export function ApiKeyManager({ initialKeys }: ApiKeyManagerProps) {
           <div className="mt-6 space-y-4">
             <div className="relative group">
                <div className="absolute -inset-0.5 bg-gradient-to-r from-emerald-500 to-indigo-500 rounded-xl blur opacity-30 group-hover:opacity-50 transition duration-1000"></div>
-               <div className="relative bg-black flex items-center justify-between p-4 rounded-xl border border-white/10 gap-3">
-                  <code className="text-emerald-400 font-mono text-sm break-all">
+               <div className="relative bg-black flex items-center justify-center p-6 rounded-xl border border-white/10 gap-3">
+                  <code className="text-emerald-400 font-mono text-lg break-all text-center">
                     {newKeyRaw}
                   </code>
-                  <Button 
-                    size="icon" 
-                    variant="ghost" 
-                    onClick={copyToClipboard}
-                    className="flex-shrink-0 hover:bg-white/10"
-                  >
-                    {copied ? <CheckCircle2 className="h-4 w-4 text-emerald-400" /> : <Copy className="h-4 w-4" />}
-                  </Button>
                </div>
             </div>
+
+            <Button 
+              size="lg"
+              className="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-6"
+              onClick={copyToClipboard}
+            >
+              {copied ? (
+                <>
+                  <CheckCircle2 className="h-5 w-5 mr-2" />
+                  Copied Successfully!
+                </>
+              ) : (
+                <>
+                  <Copy className="h-5 w-5 mr-2" />
+                  Copy API Key
+                </>
+              )}
+            </Button>
 
             <Button 
               className="w-full bg-white/10 hover:bg-white/20 border border-white/10"
