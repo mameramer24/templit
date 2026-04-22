@@ -26,6 +26,8 @@ async function fixUserOrg() {
         })
         .returning();
 
+      if (!org) throw new Error("Failed to create org");
+
       await db.insert(orgMembers).values({
         userId: user.id,
         orgId: org.id,

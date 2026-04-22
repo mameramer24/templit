@@ -109,7 +109,7 @@ function TemplateCard({ template }: { template: Template }) {
           <CardTitle className="text-sm font-medium text-white truncate max-w-[150px]">
             {template.name}
           </CardTitle>
-          <div className="flex items-center gap-1 group/id opacity-0 group-hover:opacity-100 transition-opacity">
+          <div className="flex items-center gap-1">
             <span className="text-[9px] font-mono text-white/20">ID: {template.id.slice(0, 8)}...</span>
             <CopyIdButton id={template.id} label="Template ID" />
           </div>

@@ -14,6 +14,7 @@ import { toast } from "sonner";
 
 export default function NewTemplatePage() {
   const router = useRouter();
+  const [loading, setLoading] = useState(false);
   const [dimensions, setDimensions] = useState({ width: 1200, height: 630 });
 
   const PRESETS = [

@@ -768,9 +768,9 @@ export default function CanvasEditor({
                     <label className="text-xs text-white/50">Font Family</label>
                     <Select
                       value={selectedLayer.fontFamily || "Inter, sans-serif"}
-                      onValueChange={(val) =>
-                        updateLayer(selectedLayer.id, { fontFamily: val })
-                      }
+                      onValueChange={(val) => {
+                        if (val) updateLayer(selectedLayer.id, { fontFamily: val });
+                      }}
                     >
                       <SelectTrigger className="h-7 bg-white/5 border-white/10 text-white text-[10px]">
                         <SelectValue placeholder="Font family" />
