@@ -163,9 +163,12 @@ export function ApiKeyManager({ initialKeys }: ApiKeyManagerProps) {
       {/* Secret Display Dialog */}
       <Dialog 
         open={showDialog} 
-        onOpenChange={setShowDialog}
-        disablePointerDismissal={true}
-        disableEscapeDismissal={true}
+        onOpenChange={(open) => {
+          // Prevent closing the dialog if we have a new key being shown
+          // unless explicitly closed via our buttons (which would set showDialog to false)
+          if (!open && newKeyRaw) return;
+          setShowDialog(open);
+        }}
       >
         <DialogContent 
            className="bg-[#121225] border-white/10 text-white max-w-md"
@@ -212,7 +215,10 @@ export function ApiKeyManager({ initialKeys }: ApiKeyManagerProps) {
 
             <Button 
               className="w-full bg-white/10 hover:bg-white/20 border border-white/10"
-              onClick={() => setShowDialog(false)}
+              onClick={() => {
+                setNewKeyRaw(null);
+                setShowDialog(false);
+              }}
             >
               I&apos;ve stored it securely
             </Button>
