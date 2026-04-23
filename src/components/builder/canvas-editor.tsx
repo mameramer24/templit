@@ -445,12 +445,19 @@ export default function CanvasEditor({
       if (idx === -1) return;
 
       const newLayers = [...layers];
+      const currentLayer = newLayers[idx];
+      if (!currentLayer) return;
+
       if (direction === "up" && idx < layers.length - 1) {
-        [newLayers[idx], newLayers[idx + 1]] = [newLayers[idx + 1], newLayers[idx]];
+        const neighboringLayer = newLayers[idx + 1]!;
+        newLayers[idx] = neighboringLayer;
+        newLayers[idx + 1] = currentLayer;
       } else if (direction === "down" && idx > 0) {
-        [newLayers[idx], newLayers[idx - 1]] = [newLayers[idx - 1], newLayers[idx]];
+        const neighboringLayer = newLayers[idx - 1]!;
+        newLayers[idx] = neighboringLayer;
+        newLayers[idx - 1] = currentLayer;
       } else {
-        return; // No change
+        return;
       }
       updateLayers(newLayers);
     },
