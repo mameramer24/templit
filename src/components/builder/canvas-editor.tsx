@@ -500,7 +500,7 @@ export default function CanvasEditor({
                   <div className="flex items-center gap-2 max-w-[120px]">
                     {l.type === "text" ? <Type className="h-3.5 w-3.5" /> : l.type === "rect" ? <Square className="h-3.5 w-3.5" /> : <ImageIcon className="h-3.5 w-3.5" />}
                     <span className="text-xs truncate font-medium">
-                      {l.name || (l.type === "text" ? l.text : l.type)}
+                      {l.type === "text" ? (l.text || "Text") : l.type}
                     </span>
                   </div>
                   <div className="flex items-center gap-1">
