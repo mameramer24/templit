@@ -24,7 +24,9 @@ const nextConfig: NextConfig = {
   async headers() {
     return [
       {
-        source: "/(.*)",
+        // Only apply COEP/COOP to page routes, NOT to API routes
+        // These headers on API routes block external POST requests (e.g. from n8n)
+        source: "/((?!api/).*)",
         headers: [
           {
             key: "Cross-Origin-Opener-Policy",
@@ -33,6 +35,42 @@ const nextConfig: NextConfig = {
           {
             key: "Cross-Origin-Embedder-Policy",
             value: "require-corp",
+          },
+        ],
+      },
+      {
+        // For API routes: allow cross-origin requests
+        source: "/api/(.*)",
+        headers: [
+          {
+            key: "Access-Control-Allow-Origin",
+            value: "*",
+          },
+          {
+            key: "Access-Control-Allow-Methods",
+            value: "GET, POST, PUT, DELETE, OPTIONS",
+          },
+          {
+            key: "Access-Control-Allow-Headers",
+            value: "Content-Type, X-API-Key, Authorization",
+          },
+        ],
+      },
+      {
+        // Also allow CORS for the /trigger route
+        source: "/trigger",
+        headers: [
+          {
+            key: "Access-Control-Allow-Origin",
+            value: "*",
+          },
+          {
+            key: "Access-Control-Allow-Methods",
+            value: "GET, POST, PUT, DELETE, OPTIONS",
+          },
+          {
+            key: "Access-Control-Allow-Headers",
+            value: "Content-Type, X-API-Key, Authorization",
           },
         ],
       },
