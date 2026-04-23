@@ -94,28 +94,34 @@ export default function DocsPage() {
                 </div>
               </div>
 
-              {/* Trigger Render (Mocked) */}
-              <div className="group opacity-70">
+              <div className="group">
                 <div className="flex items-center gap-4 mb-4">
                   <span className="bg-indigo-500/20 text-indigo-400 text-[10px] font-bold px-2 py-1 rounded uppercase tracking-wider">POST</span>
-                  <h3 className="text-xl font-bold">/api/v1/render</h3>
+                  <h3 className="text-xl font-bold">/trigger</h3>
                 </div>
                 <p className="text-white/40 mb-4">Trigger a background rendering job with dynamic data overrides.</p>
                 <div className="bg-black/30 border border-white/5 rounded-2xl p-6 font-mono text-sm leading-relaxed">
-                    <p className="text-white/20 mb-2">// Payload</p>
+                    <p className="text-white/20 mb-2">// POST https://templit-azure.vercel.app/trigger</p>
                     <pre className="text-indigo-400/80">
 {`{
-  "templateId": "tpl_123...",
+  "templateId": "your-template-id",
   "variables": {
-    "title": "Welcome, Mohammad!",
-    "avatar": "https://..."
-  }
+    "name": "أحمد علي",
+    "name2": "مرحباً بك!"
+  },
+  "format": "png"
 }`}
                     </pre>
                 </div>
-                <div className="mt-3 flex items-center gap-2 text-indigo-400/60 text-xs">
-                   <AlertCircle className="h-3 w-3" />
-                   <span>Render endpoint is currently processing. Finalizing background queue integration.</span>
+                <div className="mt-4 bg-black/30 border border-white/5 rounded-2xl p-6 font-mono text-sm leading-relaxed">
+                    <p className="text-white/20 mb-2">// Response</p>
+                    <pre className="text-emerald-400/80">
+{`{
+  "message": "POST Success - If you see this, connectivity is OK",
+  "method": "POST",
+  "time": "2026-04-23T..."
+}`}
+                    </pre>
                 </div>
               </div>
             </div>
