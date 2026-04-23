@@ -54,6 +54,8 @@ import {
   ZoomOut,
   Maximize,
   Library,
+  ChevronUp,
+  ChevronDown,
 } from "lucide-react";
 import type { Template } from "@/lib/db/schema";
 import { saveTemplateLayersAction } from "@/app/actions/template-actions";
@@ -597,9 +599,10 @@ export default function CanvasEditor({
   );
 
   const moveLayer = useCallback(
-    (direction: "up" | "down") => {
-      if (!selectedId) return;
-      const idx = layers.findIndex((l) => l.id === selectedId);
+    (direction: "up" | "down", targetId?: string) => {
+      const idToMove = targetId || selectedId;
+      if (!idToMove) return;
+      const idx = layers.findIndex((l) => l.id === idToMove);
       if (idx === -1) return;
 
       const newLayers = [...layers];
@@ -607,11 +610,11 @@ export default function CanvasEditor({
       if (!currentLayer) return;
 
       if (direction === "up" && idx < layers.length - 1) {
-        newLayers.splice(idx, 1);
-        newLayers.push(currentLayer);
+        newLayers[idx] = newLayers[idx + 1];
+        newLayers[idx + 1] = currentLayer;
       } else if (direction === "down" && idx > 0) {
-        newLayers.splice(idx, 1);
-        newLayers.unshift(currentLayer);
+        newLayers[idx] = newLayers[idx - 1];
+        newLayers[idx - 1] = currentLayer;
       } else {
         return;
       }
@@ -692,14 +695,28 @@ export default function CanvasEditor({
                     </span>
                   </div>
                   <div className="flex items-center gap-1">
+                    <button 
+                      onClick={(e) => { e.stopPropagation(); moveLayer("up", l.id); }} 
+                      className="p-1 hover:text-white"
+                      title="Move Forward / Up"
+                    >
+                      <ChevronUp className="h-3.5 w-3.5" />
+                    </button>
+                    <button 
+                      onClick={(e) => { e.stopPropagation(); moveLayer("down", l.id); }} 
+                      className="p-1 hover:text-white"
+                      title="Move Backward / Down"
+                    >
+                      <ChevronDown className="h-3.5 w-3.5" />
+                    </button>
                     <button onClick={(e) => { e.stopPropagation(); updateLayer(l.id, { visible: !l.visible }); }} className="p-1 hover:text-white">
-                      {l.visible ? <Eye className="h-3 w-3" /> : <EyeOff className="h-3 w-3" />}
+                      {l.visible ? <Eye className="h-3.5 w-3.5" /> : <EyeOff className="h-3.5 w-3.5" />}
                     </button>
                     <button onClick={(e) => { e.stopPropagation(); updateLayer(l.id, { locked: !l.locked }); }} className="p-1 hover:text-white">
-                      {l.locked ? <Lock className="h-3 w-3 text-amber-500" /> : <Unlock className="h-3 w-3" />}
+                      {l.locked ? <Lock className="h-3.5 w-3.5 text-amber-500" /> : <Unlock className="h-3.5 w-3.5" />}
                     </button>
                     <button onClick={(e) => { e.stopPropagation(); setLayers(layers.filter(x => x.id !== l.id)); }} className="p-1 hover:text-red-400 opacity-0 group-hover:opacity-100">
-                      <Trash2 className="h-3 w-3" />
+                      <Trash2 className="h-3.5 w-3.5" />
                     </button>
                   </div>
                 </div>
