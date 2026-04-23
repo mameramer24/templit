@@ -189,7 +189,7 @@ function TextShape({ layer, isSelected, onSelect, onChange }: ShapeProps) {
   let style = "normal";
   if (family.includes(":")) {
     const parts = family.split(":");
-    family = parts[0];
+    family = parts[0] || family;
     if (parts[1] === "700") style = "bold";
   }
 
