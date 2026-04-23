@@ -1,15 +1,12 @@
-import { ImageResponse } from "next/og";
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { templates } from "@/lib/db/schema";
 import { eq } from "drizzle-orm";
-import React from "react";
-
-export const runtime = "nodejs";
 
 /**
  * GET /api/v1/image?templateId=XXX&vars=BASE64_JSON
- * Renders a template to a PNG image using next/og (Satori).
+ * Renders a template to an SVG image (works as PNG-equivalent in browsers/n8n).
+ * Uses pure SVG generation - no external dependencies.
  */
 export async function GET(request: NextRequest) {
   try {
@@ -58,92 +55,74 @@ export async function GET(request: NextRequest) {
       return raw;
     }
 
-    const element = React.createElement(
-      "div",
-      {
-        style: {
-          width: W,
-          height: H,
-          backgroundColor: bg,
-          position: "relative",
-          display: "flex",
-        },
+    // Escape XML special chars
+    function esc(str: string): string {
+      return str
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&apos;");
+    }
+
+    // Generate SVG elements for each layer
+    const layersSvg = layers
+      .filter((l: any) => l.visible !== false)
+      .map((layer: any) => {
+        const x = Math.round(layer.x ?? 0);
+        const y = Math.round(layer.y ?? 0);
+        const w = Math.round(layer.width ?? 100);
+        const h = Math.round(layer.height ?? 40);
+        const opacity = layer.opacity ?? 1;
+
+        if (layer.type === "rect") {
+          const fill = layer.fill || "#cccccc";
+          const rx = layer.cornerRadius ?? 0;
+          return `<rect x="${x}" y="${y}" width="${w}" height="${h}" fill="${esc(fill)}" opacity="${opacity}" rx="${rx}" ry="${rx}"/>`;
+        }
+
+        if (layer.type === "text") {
+          const text = resolveText(layer);
+          const fill = layer.fill || "#000000";
+          const fontSize = layer.fontSize ?? 24;
+          const letterSpacing = layer.letterSpacing ?? 0;
+          const textAnchor = layer.align === "center" ? "middle" : layer.align === "right" ? "end" : "start";
+          const anchorX = layer.align === "center" ? x + w / 2 : layer.align === "right" ? x + w : x;
+
+          // Split text into lines for multi-line support
+          const lines = text.split("\n");
+          const lineHeight = layer.lineHeight ? fontSize * layer.lineHeight : fontSize * 1.3;
+
+          return lines.map((line: string, i: number) => 
+            `<text x="${anchorX}" y="${y + fontSize + (i * lineHeight)}" fill="${esc(fill)}" font-size="${fontSize}" opacity="${opacity}" text-anchor="${textAnchor}" letter-spacing="${letterSpacing}" font-family="Arial, sans-serif">${esc(line)}</text>`
+          ).join("\n");
+        }
+
+        if (layer.type === "image") {
+          const src = (layer.name && variables[layer.name]) ? variables[layer.name]! : (layer.src || null);
+          if (!src) return "";
+          return `<image href="${esc(src)}" x="${x}" y="${y}" width="${w}" height="${h}" opacity="${opacity}" preserveAspectRatio="xMidYMid meet"/>`;
+        }
+
+        return "";
+      })
+      .join("\n");
+
+    const svg = `<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink"
+     width="${W}" height="${H}" viewBox="0 0 ${W} ${H}">
+  <rect width="${W}" height="${H}" fill="${esc(bg)}"/>
+  ${layersSvg}
+</svg>`;
+
+    return new NextResponse(svg, {
+      status: 200,
+      headers: {
+        "Content-Type": "image/svg+xml",
+        "Cache-Control": "no-cache",
+        "Access-Control-Allow-Origin": "*",
       },
-      ...layers
-        .filter((l: any) => l.visible !== false)
-        .map((layer: any, i: number) => {
-          const x = Math.round(layer.x ?? 0);
-          const y = Math.round(layer.y ?? 0);
-          const w = Math.round(layer.width ?? 100);
-          const h = Math.round(layer.height ?? 40);
-          const opacity = layer.opacity ?? 1;
-
-          if (layer.type === "rect") {
-            return React.createElement("div", {
-              key: i,
-              style: {
-                position: "absolute",
-                left: x,
-                top: y,
-                width: w,
-                height: h,
-                backgroundColor: layer.fill || "#cccccc",
-                opacity,
-                borderRadius: layer.cornerRadius ?? 0,
-              },
-            });
-          }
-
-          if (layer.type === "text") {
-            return React.createElement(
-              "div",
-              {
-                key: i,
-                style: {
-                  position: "absolute",
-                  left: x,
-                  top: y,
-                  width: w,
-                  fontSize: layer.fontSize ?? 24,
-                  color: layer.fill || "#000000",
-                  opacity,
-                  fontFamily: "sans-serif",
-                  textAlign: layer.align ?? "left",
-                  display: "flex",
-                  flexWrap: "wrap" as const,
-                },
-              },
-              resolveText(layer)
-            );
-          }
-
-          if (layer.type === "image") {
-            const imgSrc =
-              (layer.name && variables[layer.name]) ? variables[layer.name]! : (layer.src || null);
-            if (!imgSrc) return null;
-            return React.createElement("img", {
-              key: i,
-              src: imgSrc,
-              width: w,
-              height: h,
-              style: {
-                position: "absolute",
-                left: x,
-                top: y,
-                width: w,
-                height: h,
-                opacity,
-                objectFit: "cover" as const,
-              },
-            });
-          }
-
-          return null;
-        })
-        .filter(Boolean)
-    );
-
-    return new ImageResponse(element, { width: W, height: H });
+    });
   } catch (err) {
     console.error("[GET /api/v1/image]", err);
     return NextResponse.json(
