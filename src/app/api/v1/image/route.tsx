@@ -41,7 +41,7 @@ async function getFontBuffer(fontFamily: string, weight: number = 400): Promise<
       if (cssRes.ok) {
         const cssText = await cssRes.text();
         const match = cssText.match(/url\((https:\/\/[^)]+\.ttf)\)/);
-        if (match) url = match[1];
+        if (match && match[1]) url = match[1];
       }
     } catch(e) {}
   }
