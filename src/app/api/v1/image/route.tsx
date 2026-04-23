@@ -8,7 +8,9 @@ export const runtime = "nodejs";
 
 // Use raw Github TTFs to ensure exact TTF format for Font buffer
 async function getFontBuffer(fontFamily: string, weight: number = 400): Promise<ArrayBuffer | null> {
-  const familyName = fontFamily.split(",")[0].replace(/['"]/g, "").trim();
+  const familyPart = fontFamily.split(",")[0];
+  if (!familyPart) return null;
+  const familyName = familyPart.replace(/['"]/g, "").trim();
   let url = "";
 
   if (familyName === "beIN Normal") {
@@ -96,7 +98,8 @@ export async function GET(request: NextRequest) {
     layers.forEach((l: any) => {
       if (l.type === "text" && l.visible !== false) {
         let weight = 400;
-        let familyName = (l.fontFamily || "Inter").split(",")[0].replace(/['"]/g, "").trim();
+        let familyPart = (l.fontFamily || "Inter").split(",")[0];
+        let familyName = (familyPart || "").replace(/['"]/g, "").trim();
         if (familyName.includes(":")) {
           const parts = familyName.split(":");
           familyName = parts[0];
@@ -189,7 +192,8 @@ export async function GET(request: NextRequest) {
           if (layer.type === "text") {
             const text = resolveText(layer);
             const fontSize = layer.fontSize ?? 24;
-            let familyName = (layer.fontFamily || "Inter").split(",")[0].replace(/['"]/g, "").trim();
+            let familyPart = (layer.fontFamily || "Inter").split(",")[0];
+            let familyName = (familyPart || "").replace(/['"]/g, "").trim();
             if (familyName.includes(":")) {
               familyName = familyName.split(":")[0];
             }
