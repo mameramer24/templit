@@ -301,11 +301,31 @@ export default function CanvasEditor({
     { name: "Full HD", width: 1920, height: 1080 },
   ];
   // ── State ────────────────────────────────────────────────────────────────
-
   const [scale, setScale] = useState(1);
   const [stagePos, setStagePos] = useState({ x: 0, y: 0 });
   const [activeTab, setActiveTab] = useState<"layers" | "assets">("layers");
+  
+  const [canvas, setCanvas] = useState<CanvasConfig>(() => ({
+    width: (template?.canvas as CanvasConfig | null | undefined)?.width ?? 1200,
+    height: (template?.canvas as CanvasConfig | null | undefined)?.height ?? 630,
+    background:
+      (template?.canvas as CanvasConfig | null | undefined)?.background ??
+      "#ffffff",
+  }));
 
+  const [layers, setLayers] = useState<CanvasLayer[]>(
+    () =>
+      ((template?.layers as CanvasLayer[] | null | undefined) ?? []) as CanvasLayer[]
+  );
+
+  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [history, setHistory] = useState<CanvasLayer[][]>([layers]);
+  const [historyIdx, setHistoryIdx] = useState(0);
+
+  const stageRef = useRef<Konva.Stage>(null);
+  const [isSaving, setIsSaving] = useState(false);
+
+  // ── Assets ────────────────────────────────────────────────────────────────
   const PLACEHOLDERS = {
     images: [
       { name: "Avatar", url: "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=200&auto=format&fit=crop&q=60" },
@@ -336,26 +356,6 @@ export default function CanvasEditor({
       setSelectedId(newLayer.id);
     };
   };
-
-  const [canvas, setCanvas] = useState<CanvasConfig>(() => ({
-    width: (template?.canvas as CanvasConfig | null | undefined)?.width ?? 1200,
-    height: (template?.canvas as CanvasConfig | null | undefined)?.height ?? 630,
-    background:
-      (template?.canvas as CanvasConfig | null | undefined)?.background ??
-      "#ffffff",
-  }));
-
-  const [layers, setLayers] = useState<CanvasLayer[]>(
-    () =>
-      ((template?.layers as CanvasLayer[] | null | undefined) ?? []) as CanvasLayer[]
-  );
-
-  const [selectedId, setSelectedId] = useState<string | null>(null);
-  const [history, setHistory] = useState<CanvasLayer[][]>([layers]);
-  const [historyIdx, setHistoryIdx] = useState(0);
-
-  const stageRef = useRef<Konva.Stage>(null);
-  const [isSaving, setIsSaving] = useState(false);
 
   async function handleSave() {
     if (!template) return;
