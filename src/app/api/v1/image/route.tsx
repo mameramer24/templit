@@ -2,11 +2,13 @@ import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { templates } from "@/lib/db/schema";
 import { eq } from "drizzle-orm";
+import sharp from "sharp";
+
+export const runtime = "nodejs";
 
 /**
  * GET /api/v1/image?templateId=XXX&vars=BASE64_JSON
- * Renders a template to an SVG image (works as PNG-equivalent in browsers/n8n).
- * Uses pure SVG generation - no external dependencies.
+ * Renders a template to a PNG image using sharp.
  */
 export async function GET(request: NextRequest) {
   try {
@@ -65,10 +67,25 @@ export async function GET(request: NextRequest) {
         .replace(/'/g, "&apos;");
     }
 
+    // Helper to fetch images and convert to base64 for sharp
+    async function getBase64Image(url: string) {
+      if (url.startsWith("data:")) return url;
+      try {
+        const res = await fetch(url);
+        const arrayBuffer = await res.arrayBuffer();
+        const buffer = Buffer.from(arrayBuffer);
+        const mimeType = res.headers.get("content-type") || "image/png";
+        return `data:${mimeType};base64,${buffer.toString("base64")}`;
+      } catch (err) {
+        console.error("Failed to fetch image for rendering:", url, err);
+        return "";
+      }
+    }
+
     // Generate SVG elements for each layer
-    const layersSvg = layers
+    const layersSvgPromises = layers
       .filter((l: any) => l.visible !== false)
-      .map((layer: any) => {
+      .map(async (layer: any) => {
         const x = Math.round(layer.x ?? 0);
         const y = Math.round(layer.y ?? 0);
         const w = Math.round(layer.width ?? 100);
@@ -101,12 +118,16 @@ export async function GET(request: NextRequest) {
         if (layer.type === "image") {
           const src = (layer.name && variables[layer.name]) ? variables[layer.name]! : (layer.src || null);
           if (!src) return "";
-          return `<image href="${esc(src)}" x="${x}" y="${y}" width="${w}" height="${h}" opacity="${opacity}" preserveAspectRatio="xMidYMid meet"/>`;
+          const base64Url = await getBase64Image(src);
+          if (!base64Url) return "";
+          return `<image href="${esc(base64Url)}" x="${x}" y="${y}" width="${w}" height="${h}" opacity="${opacity}" preserveAspectRatio="xMidYMid meet"/>`;
         }
 
         return "";
-      })
-      .join("\n");
+      });
+
+    const resolvedLayers = await Promise.all(layersSvgPromises);
+    const layersSvg = resolvedLayers.join("\n");
 
     const svg = `<?xml version="1.0" encoding="UTF-8"?>
 <svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink"
@@ -115,10 +136,15 @@ export async function GET(request: NextRequest) {
   ${layersSvg}
 </svg>`;
 
-    return new NextResponse(svg, {
+    // Render SVG string into PNG Buffer using sharp
+    const pngBuffer = await sharp(Buffer.from(svg))
+      .png({ quality: 100 })
+      .toBuffer();
+
+    return new NextResponse(pngBuffer, {
       status: 200,
       headers: {
-        "Content-Type": "image/svg+xml",
+        "Content-Type": "image/png",
         "Cache-Control": "no-cache",
         "Access-Control-Allow-Origin": "*",
       },
