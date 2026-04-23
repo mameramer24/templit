@@ -67,11 +67,11 @@ export async function GET(request: NextRequest) {
     const raw = layer.text || "";
     // Try matching by layer name (if set)
     if (layer.name && variables[layer.name] !== undefined) {
-      return variables[layer.name];
+      return variables[layer.name]!;
     }
     // Try matching by current text value as key
     if (variables[raw] !== undefined) {
-      return variables[raw];
+      return variables[raw]!;
     }
     return raw;
   }
