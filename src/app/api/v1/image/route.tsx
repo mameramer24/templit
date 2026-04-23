@@ -83,7 +83,9 @@ export async function GET(request: NextRequest) {
     }
 
     async function getGoogleFontBase64(fontFamily: string) {
-      const familyName = fontFamily.split(",")[0].replace(/['"]/g, "").trim();
+      const familyPart = fontFamily.split(",")[0];
+      if (!familyPart) return null;
+      const familyName = familyPart.replace(/['"]/g, "").trim();
       if (!familyName || familyName === "sans-serif" || familyName === "serif") return null;
 
       // Handle Custom External Fonts (beIN / Dubai)
