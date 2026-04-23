@@ -598,13 +598,11 @@ export default function CanvasEditor({
       if (!currentLayer) return;
 
       if (direction === "up" && idx < layers.length - 1) {
-        const neighboringLayer = newLayers[idx + 1]!;
-        newLayers[idx] = neighboringLayer;
-        newLayers[idx + 1] = currentLayer;
+        newLayers.splice(idx, 1);
+        newLayers.push(currentLayer);
       } else if (direction === "down" && idx > 0) {
-        const neighboringLayer = newLayers[idx - 1]!;
-        newLayers[idx] = neighboringLayer;
-        newLayers[idx - 1] = currentLayer;
+        newLayers.splice(idx, 1);
+        newLayers.unshift(currentLayer);
       } else {
         return;
       }
@@ -912,36 +910,6 @@ export default function CanvasEditor({
               x={stagePos.x}
               y={stagePos.y}
               draggable={false}
-              onDragEnd={(e) => {
-                setStagePos({ x: e.target.x(), y: e.target.y() });
-              }}
-              onWheel={(e) => {
-                e.evt.preventDefault();
-                const stage = stageRef.current;
-                if (!stage) return;
-
-                const oldScale = stage.scaleX();
-                const pointer = stage.getPointerPosition();
-                if (!pointer) return;
-
-                const mousePointTo = {
-                  x: (pointer.x - stage.x()) / oldScale,
-                  y: (pointer.y - stage.y()) / oldScale,
-                };
-
-                const scaleBy = 1.1;
-                const newScale = e.evt.deltaY > 0 ? oldScale / scaleBy : oldScale * scaleBy;
-                const clampedScale = Math.max(0.05, Math.min(5, newScale));
-                
-                setScale(clampedScale);
-
-                const newPos = {
-                  x: pointer.x - mousePointTo.x * clampedScale,
-                  y: pointer.y - mousePointTo.y * clampedScale,
-                };
-                
-                setStagePos(newPos);
-              }}
               style={{ cursor: "default" }}
               onMouseDown={(e) => {
                 // Deselect when clicking on empty stage area
@@ -1151,7 +1119,7 @@ export default function CanvasEditor({
                     onClick={() => moveLayer("up")}
                     disabled={layers.findIndex(l => l.id === selectedId) === layers.length - 1}
                   >
-                    Bring Forward
+                    Bring to Front
                   </Button>
                   <Button
                     variant="outline"
@@ -1160,7 +1128,7 @@ export default function CanvasEditor({
                     onClick={() => moveLayer("down")}
                     disabled={layers.findIndex(l => l.id === selectedId) === 0}
                   >
-                    Send Backward
+                    Send to Back
                   </Button>
                 </div>
               </div>
