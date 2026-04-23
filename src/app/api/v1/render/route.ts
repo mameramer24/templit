@@ -12,37 +12,46 @@ const renderSchema = z.object({
 });
 
 /**
- * POST /api/v1/render
- * 
- * Triggers a rendering job for a template.
- * For now, in MVP, it returns a 201 with the template metadata 
- * as if it was processed.
+ * Handle both GET and POST to bypass n8n redirect/method issues
  */
-export async function POST(request: NextRequest) {
+async function handleRequest(request: NextRequest) {
   const auth = await validateApiAuth(request);
   if (!auth) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  let body: unknown;
-  try {
-    body = await request.json();
-  } catch {
-    return NextResponse.json({ error: "Invalid JSON body" }, { status: 400 });
+  let body: any = {};
+  
+  if (request.method === "POST") {
+    try {
+      body = await request.json();
+    } catch {
+      // Body might be empty or not JSON
+    }
+  } else {
+    // For GET, try to get params from URL
+    const url = new URL(request.url);
+    body = {
+      templateId: url.searchParams.get("templateId"),
+      variables: {}, // Advanced variables in GET are complex, skip for now
+      format: url.searchParams.get("format") || "png",
+    };
   }
 
   const parsed = renderSchema.safeParse(body);
-  if (!parsed.success) {
+  if (!parsed.success && request.method === "POST") {
     return NextResponse.json(
       { error: "Validation failed", details: parsed.error.flatten() },
       { status: 422 }
     );
   }
 
-  const { templateId, variables, format } = parsed.data;
+  const templateId = parsed.data?.templateId || (body as any).templateId;
+  if (!templateId) {
+    return NextResponse.json({ error: "templateId is required" }, { status: 400 });
+  }
 
   try {
-    // 1. Verify template exists and belongs to org
     const [template] = await db
       .select()
       .from(templates)
@@ -57,8 +66,6 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Unauthorized access to template" }, { status: 403 });
     }
 
-    // 2. In a real production app, we would queue a job here.
-    // For the current request, we return the Template ID and a Render ID.
     const renderId = `rnd_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
 
     return NextResponse.json({
@@ -68,21 +75,31 @@ export async function POST(request: NextRequest) {
         templateId: template.id,
         status: "processing",
         message: "Rendering started. Use the ID to poll status (Simulation).",
-        // In this simulation, we return the template names to show we found it
         templateName: template.name,
       }
     }, { status: 201 });
 
   } catch (err) {
-    console.error("[POST /api/v1/render]", err);
-    return NextResponse.json(
-      { error: "Internal server error" },
-      { status: 500 }
-    );
+    console.error("[Render API]", err);
+    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }
 }
 
-// Support for OPTIONS (CORS) or other methods can be added here if needed
-export async function GET() {
-  return NextResponse.json({ error: "Method not allowed. Use POST to trigger renders." }, { status: 405 });
+export async function POST(request: NextRequest) {
+  return handleRequest(request);
+}
+
+export async function GET(request: NextRequest) {
+  return handleRequest(request);
+}
+
+export async function OPTIONS() {
+  return new Response(null, {
+    status: 204,
+    headers: {
+      'Access-Control-Allow-Origin': '*',
+      'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
+      'Access-Control-Allow-Headers': 'Content-Type, X-API-Key',
+    },
+  });
 }
