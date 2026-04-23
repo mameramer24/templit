@@ -141,7 +141,7 @@ export async function GET(request: NextRequest) {
       .png({ quality: 100 })
       .toBuffer();
 
-    return new Response(pngBuffer, {
+    return new NextResponse(pngBuffer as any, {
       status: 200,
       headers: {
         "Content-Type": "image/png",
