@@ -438,6 +438,25 @@ export default function CanvasEditor({
     [layers, updateLayers]
   );
 
+  const moveLayer = useCallback(
+    (direction: "up" | "down") => {
+      if (!selectedId) return;
+      const idx = layers.findIndex((l) => l.id === selectedId);
+      if (idx === -1) return;
+
+      const newLayers = [...layers];
+      if (direction === "up" && idx < layers.length - 1) {
+        [newLayers[idx], newLayers[idx + 1]] = [newLayers[idx + 1], newLayers[idx]];
+      } else if (direction === "down" && idx > 0) {
+        [newLayers[idx], newLayers[idx - 1]] = [newLayers[idx - 1], newLayers[idx]];
+      } else {
+        return; // No change
+      }
+      updateLayers(newLayers);
+    },
+    [layers, selectedId, updateLayers]
+  );
+
   const toggleLayerProp = useCallback(
     (id: string, prop: "locked" | "visible") => {
       const newLayers = layers.map((l) =>
@@ -933,6 +952,30 @@ export default function CanvasEditor({
                     }
                     className="h-7 bg-white/5 border-white/10 text-white text-xs"
                   />
+                </div>
+              </div>
+
+              <div className="space-y-1">
+                <label className="text-xs text-white/50">Layer Order</label>
+                <div className="flex gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="flex-1 h-8 border-white/10 text-white/70 hover:bg-white/5"
+                    onClick={() => moveLayer("up")}
+                    disabled={layers.findIndex(l => l.id === selectedId) === layers.length - 1}
+                  >
+                    Bring Forward
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="flex-1 h-8 border-white/10 text-white/70 hover:bg-white/5"
+                    onClick={() => moveLayer("down")}
+                    disabled={layers.findIndex(l => l.id === selectedId) === 0}
+                  >
+                    Send Backward
+                  </Button>
                 </div>
               </div>
 
