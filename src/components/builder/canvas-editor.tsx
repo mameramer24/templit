@@ -185,6 +185,14 @@ function TextShape({ layer, isSelected, onSelect, onChange }: ShapeProps) {
     }
   }, [isSelected]);
 
+  let family = layer.fontFamily ?? "sans-serif";
+  let style = "normal";
+  if (family.includes(":")) {
+    const parts = family.split(":");
+    family = parts[0];
+    if (parts[1] === "700") style = "bold";
+  }
+
   return (
     <>
       <Text
@@ -199,7 +207,8 @@ function TextShape({ layer, isSelected, onSelect, onChange }: ShapeProps) {
         visible={layer.visible}
         text={layer.text ?? ""}
         fontSize={layer.fontSize ?? 24}
-        fontFamily={layer.fontFamily ?? "sans-serif"}
+        fontFamily={family}
+        fontStyle={style}
         fill={layer.fill ?? "#000000"}
         lineHeight={layer.lineHeight ?? 1}
         letterSpacing={layer.letterSpacing ?? 0}
@@ -396,16 +405,14 @@ export default function CanvasEditor({
   onCanvasChange,
 }: CanvasEditorProps) {
   const FONTS = [
-    { name: "Inter", value: "Inter, sans-serif" },
-    { name: "Cairo (Arabic)", value: "Cairo, sans-serif" },
-    { name: "Tajawal (Arabic)", value: "Tajawal, sans-serif" },
+    { name: "Inter Regular", value: "Inter:400, sans-serif" },
+    { name: "Inter Bold", value: "Inter:700, sans-serif" },
+    { name: "Cairo Regular (Arabic)", value: "Cairo:400, sans-serif" },
+    { name: "Cairo Bold (Arabic)", value: "Cairo:700, sans-serif" },
+    { name: "Tajawal Regular (Arabic)", value: "Tajawal:400, sans-serif" },
+    { name: "Tajawal Bold (Arabic)", value: "Tajawal:700, sans-serif" },
     { name: "beIN Normal (Arabic)", value: "beIN Normal, sans-serif" },
     { name: "Dubai (Arabic)", value: "Dubai, sans-serif" },
-    { name: "Montserrat", value: "Montserrat, sans-serif" },
-    { name: "Playfair Display", value: "Playfair Display, serif" },
-    { name: "Oswald", value: "Oswald, sans-serif" },
-    { name: "Roboto", value: "Roboto, sans-serif" },
-    { name: "Open Sans", value: "Open Sans, sans-serif" },
   ];
 
   const SIZE_PRESETS = [

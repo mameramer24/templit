@@ -1,15 +1,58 @@
 import { NextRequest, NextResponse } from "next/server";
+import { ImageResponse } from "next/og";
 import { db } from "@/lib/db";
 import { templates } from "@/lib/db/schema";
 import { eq } from "drizzle-orm";
-import sharp from "sharp";
 
 export const runtime = "nodejs";
 
-/**
- * GET /api/v1/image?templateId=XXX&vars=BASE64_JSON
- * Renders a template to a PNG image using sharp.
- */
+// Use raw Github TTFs to ensure exact TTF format for Font buffer
+async function getFontBuffer(fontFamily: string, weight: number = 400): Promise<ArrayBuffer | null> {
+  const familyName = fontFamily.split(",")[0].replace(/['"]/g, "").trim();
+  let url = "";
+
+  if (familyName === "beIN Normal") {
+    url = "https://raw.githubusercontent.com/abdalali/fonts/master/beIN-Normal.ttf";
+  } else if (familyName === "Dubai") {
+    url = "https://raw.githubusercontent.com/MizterThe1st/fonts/master/Dubai-Regular.ttf";
+  } else if (familyName === "Tajawal") {
+    url = weight === 700 
+      ? "https://raw.githubusercontent.com/google/fonts/main/ofl/tajawal/Tajawal-Bold.ttf"
+      : "https://raw.githubusercontent.com/google/fonts/main/ofl/tajawal/Tajawal-Regular.ttf";
+  } else if (familyName === "Cairo") {
+    url = weight === 700 
+      ? "https://raw.githubusercontent.com/google/fonts/main/ofl/cairo/Cairo-Bold.ttf"
+      : "https://raw.githubusercontent.com/google/fonts/main/ofl/cairo/Cairo-Regular.ttf";
+  } else if (familyName === "Inter") {
+    url = weight === 700
+      ? "https://raw.githubusercontent.com/google/fonts/main/ofl/inter/Inter%5Bslnt%2Cwght%5D.ttf"
+      : "https://raw.githubusercontent.com/google/fonts/main/ofl/inter/Inter%5Bslnt%2Cwght%5D.ttf";
+  }
+
+  // Fallback to Google Fonts API if not hardcoded above
+  if (!url && familyName !== "sans-serif" && familyName !== "serif") {
+    try {
+      const gUrl = `https://fonts.googleapis.com/css2?family=${familyName.replace(/ /g, "+")}:wght@${weight}`;
+      const cssRes = await fetch(gUrl, {
+        headers: { "User-Agent": "Mozilla/5.0 (Windows NT 6.1; rv:33.0) Gecko/20120101 Firefox/33.0" }
+      });
+      if (cssRes.ok) {
+        const cssText = await cssRes.text();
+        const match = cssText.match(/url\((https:\/\/[^)]+\.ttf)\)/);
+        if (match) url = match[1];
+      }
+    } catch(e) {}
+  }
+
+  if (!url) return null;
+
+  try {
+    const res = await fetch(url);
+    if (res.ok) return await res.arrayBuffer();
+  } catch(e) {}
+  return null;
+}
+
 export async function GET(request: NextRequest) {
   try {
     const url = new URL(request.url);
@@ -22,11 +65,7 @@ export async function GET(request: NextRequest) {
 
     let variables: Record<string, string> = {};
     if (varsParam) {
-      try {
-        variables = JSON.parse(Buffer.from(varsParam, "base64").toString("utf-8"));
-      } catch {
-        // ignore malformed vars
-      }
+      try { variables = JSON.parse(Buffer.from(varsParam, "base64").toString("utf-8")); } catch {}
     }
 
     const [template] = await db
@@ -39,12 +78,7 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: "Template not found" }, { status: 404 });
     }
 
-    const canvas = template.canvas as {
-      width: number;
-      height: number;
-      background: string;
-    };
-
+    const canvas = template.canvas as { width: number; height: number; background: string; };
     const layers = (template.layers as any[]) || [];
     const W = canvas.width || 1200;
     const H = canvas.height || 630;
@@ -57,180 +91,150 @@ export async function GET(request: NextRequest) {
       return raw;
     }
 
-    // Escape XML special chars
-    function esc(str: string): string {
-      return str
-        .replace(/&/g, "&amp;")
-        .replace(/</g, "&lt;")
-        .replace(/>/g, "&gt;")
-        .replace(/"/g, "&quot;")
-        .replace(/'/g, "&apos;");
-    }
-
-    // Helper to fetch images and convert to base64 for sharp
-    async function getBase64Image(url: string) {
-      if (url.startsWith("data:")) return url;
-      try {
-        const res = await fetch(url);
-        const arrayBuffer = await res.arrayBuffer();
-        const buffer = Buffer.from(arrayBuffer);
-        const mimeType = res.headers.get("content-type") || "image/png";
-        return `data:${mimeType};base64,${buffer.toString("base64")}`;
-      } catch (err) {
-        console.error("Failed to fetch image for rendering:", url, err);
-        return "";
-      }
-    }
-
-    async function getGoogleFontBase64(fontFamily: string) {
-      const familyPart = fontFamily.split(",")[0];
-      if (!familyPart) return null;
-      const familyName = familyPart.replace(/['"]/g, "").trim();
-      if (!familyName || familyName === "sans-serif" || familyName === "serif") return null;
-
-      // Handle Custom External Fonts (beIN / Dubai)
-      let externalUrl = "";
-      if (familyName === "beIN Normal") {
-        externalUrl = "https://raw.githubusercontent.com/abdalali/fonts/master/beIN-Normal.ttf";
-      } else if (familyName === "Dubai") {
-        externalUrl = "https://raw.githubusercontent.com/MizterThe1st/fonts/master/Dubai-Regular.ttf";
-      }
-
-      if (externalUrl) {
-        try {
-          const res = await fetch(externalUrl);
-          if (res.ok) {
-            const arrayBuffer = await res.arrayBuffer();
-            const buffer = Buffer.from(arrayBuffer);
-            return `
-@font-face {
-  font-family: '${familyName}';
-  src: url(data:font/ttf;base64,${buffer.toString("base64")}) format('truetype');
-}`;
-          }
-        } catch(e) {
-          console.error("Failed to fetch custom external font:", familyName);
-        }
-      }
-
-      // Handle standard Google Fonts
-      try {
-        const url = `https://fonts.googleapis.com/css2?family=${familyName.replace(/ /g, "+")}:wght@400;700`;
-        const cssRes = await fetch(url, {
-          headers: {
-            "User-Agent": "Mozilla/5.0 (Windows NT 6.1; rv:33.0) Gecko/20120101 Firefox/33.0"
-          }
-        });
-        if (!cssRes.ok) return null;
-        const cssText = await cssRes.text();
-        const ttfUrl = cssText.match(/url\((https:\/\/[^)]+\.ttf)\)/)?.[1];
-        if (!ttfUrl) return null;
-
-        const fontRes = await fetch(ttfUrl);
-        const arrayBuffer = await fontRes.arrayBuffer();
-        const buffer = Buffer.from(arrayBuffer);
-        return `
-@font-face {
-  font-family: '${familyName}';
-  src: url(data:font/ttf;base64,${buffer.toString("base64")}) format('truetype');
-}`;
-      } catch (err) {
-        console.error("Failed to fetch Google Font CSS for:", familyName, err);
-        return null;
-      }
-    }
-
-    // Pre-fetch all necessary fonts
-    const uniqueFonts = new Set<string>();
+    // Determine requested fonts
+    const uniqueFonts = new Set<{ family: string, weight: number }>();
     layers.forEach((l: any) => {
       if (l.type === "text" && l.visible !== false) {
-        uniqueFonts.add(l.fontFamily || "Inter, sans-serif");
+        let weight = 400;
+        let familyName = (l.fontFamily || "Inter").split(",")[0].replace(/['"]/g, "").trim();
+        if (familyName.includes(":")) {
+          const parts = familyName.split(":");
+          familyName = parts[0];
+          weight = parseInt(parts[1]) || 400;
+        }
+        uniqueFonts.add({ family: familyName, weight });
       }
     });
 
-    const fontStyles = await Promise.all(
-      Array.from(uniqueFonts).map(f => getGoogleFontBase64(f))
+    const fontsData: any[] = [];
+    for (const { family, weight } of uniqueFonts) {
+      const buf = await getFontBuffer(family, weight);
+      if (buf) {
+        fontsData.push({
+          name: family,
+          data: buf,
+          weight,
+          style: "normal"
+        });
+      }
+    }
+
+    // Fallback standard font if none loaded
+    if (fontsData.length === 0) {
+      const fallbackBuf = await getFontBuffer("Inter", 400);
+      if (fallbackBuf) {
+        fontsData.push({ name: "Inter", data: fallbackBuf, weight: 400, style: "normal" });
+      }
+    }
+
+    // Render Satori Element
+    const element = (
+      <div
+        style={{
+          display: "flex",
+          width: W,
+          height: H,
+          backgroundColor: bg,
+          position: "relative",
+          overflow: "hidden"
+        }}
+      >
+        {layers.filter((l:any) => l.visible !== false).map((layer: any) => {
+          const x = Math.round(layer.x ?? 0);
+          const y = Math.round(layer.y ?? 0);
+          const w = Math.round(layer.width ?? 100);
+          const h = Math.round(layer.height ?? 40);
+          const opacity = layer.opacity ?? 1;
+
+          if (layer.type === "rect") {
+            const rx = layer.cornerRadius ?? 0;
+            return (
+              <div
+                key={layer.id}
+                style={{
+                  display: "flex",
+                  position: "absolute",
+                  left: x,
+                  top: y,
+                  width: w,
+                  height: h,
+                  backgroundColor: layer.fill || "#cccccc",
+                  borderRadius: rx,
+                  opacity
+                }}
+              />
+            );
+          }
+
+          if (layer.type === "image") {
+            const src = (layer.name && variables[layer.name]) ? variables[layer.name]! : (layer.src || null);
+            if (!src) return null;
+            return (
+              <img
+                key={layer.id}
+                src={src}
+                style={{
+                  position: "absolute",
+                  left: x,
+                  top: y,
+                  width: w,
+                  height: h,
+                  opacity,
+                  objectFit: "fill"
+                }}
+              />
+            );
+          }
+
+          if (layer.type === "text") {
+            const text = resolveText(layer);
+            const fontSize = layer.fontSize ?? 24;
+            let familyName = (layer.fontFamily || "Inter").split(",")[0].replace(/['"]/g, "").trim();
+            if (familyName.includes(":")) {
+              familyName = familyName.split(":")[0];
+            }
+            
+            return (
+              <div
+                key={layer.id}
+                style={{
+                  display: "flex",
+                  position: "absolute",
+                  left: x,
+                  top: y,
+                  width: w,
+                  flexDirection: "column",
+                  color: layer.fill || "#000000",
+                  fontSize: fontSize,
+                  fontFamily: `"${familyName}"`,
+                  letterSpacing: layer.letterSpacing ?? 0,
+                  opacity,
+                  lineHeight: layer.lineHeight || 1.3,
+                  justifyContent: layer.align === "center" ? "center" : layer.align === "right" ? "flex-end" : "flex-start",
+                  alignItems: layer.align === "center" ? "center" : layer.align === "right" ? "flex-end" : "flex-start",
+                  textAlign: layer.align === "center" ? "center" : layer.align === "right" ? "right" : "left",
+                }}
+              >
+                {text.split("\\n").map((line: string, i: number) => (
+                  <span key={i} style={{ display: "flex" }}>{line}</span>
+                ))}
+              </div>
+            );
+          }
+
+          return null;
+        })}
+      </div>
     );
-    const fontsCss = fontStyles.filter(Boolean).join("\n");
 
-    // Generate SVG elements for each layer
-    const layersSvgPromises = layers
-      .filter((l: any) => l.visible !== false)
-      .map(async (layer: any) => {
-        const x = Math.round(layer.x ?? 0);
-        const y = Math.round(layer.y ?? 0);
-        const w = Math.round(layer.width ?? 100);
-        const h = Math.round(layer.height ?? 40);
-        const opacity = layer.opacity ?? 1;
-
-        if (layer.type === "rect") {
-          const fill = layer.fill || "#cccccc";
-          const rx = layer.cornerRadius ?? 0;
-          return `<rect x="${x}" y="${y}" width="${w}" height="${h}" fill="${esc(fill)}" opacity="${opacity}" rx="${rx}" ry="${rx}"/>`;
-        }
-
-        if (layer.type === "text") {
-          const text = resolveText(layer);
-          const fill = layer.fill || "#000000";
-          const fontSize = layer.fontSize ?? 24;
-          const letterSpacing = layer.letterSpacing ?? 0;
-          const textAnchor = layer.align === "center" ? "middle" : layer.align === "right" ? "end" : "start";
-          const anchorX = layer.align === "center" ? x + w / 2 : layer.align === "right" ? x + w : x;
-
-          // Split text into lines for multi-line support
-          const lines = text.split("\n");
-          const lineHeight = layer.lineHeight ? fontSize * layer.lineHeight : fontSize * 1.3;
-
-          // Check if text contains Arabic characters to apply RTL shaping safely
-          const isArabic = /[\u0600-\u06FF]/.test(text);
-          const dirAttr = isArabic ? 'direction="rtl"' : '';
-
-          return lines.map((line: string, i: number) => 
-            `<text x="${anchorX}" y="${y + fontSize + (i * lineHeight)}" fill="${esc(fill)}" font-size="${fontSize}" opacity="${opacity}" text-anchor="${textAnchor}" letter-spacing="${letterSpacing}" font-family="${esc(layer.fontFamily || 'sans-serif')}" ${dirAttr}>${esc(line)}</text>`
-          ).join("\n");
-        }
-
-        if (layer.type === "image") {
-          const src = (layer.name && variables[layer.name]) ? variables[layer.name]! : (layer.src || null);
-          if (!src) return "";
-          const base64Url = await getBase64Image(src);
-          if (!base64Url) return "";
-          return `<image href="${esc(base64Url)}" x="${x}" y="${y}" width="${w}" height="${h}" opacity="${opacity}" preserveAspectRatio="xMidYMid meet"/>`;
-        }
-
-        return "";
-      });
-
-    const resolvedLayers = await Promise.all(layersSvgPromises);
-    const layersSvg = resolvedLayers.join("\n");
-
-    const svg = `<?xml version="1.0" encoding="UTF-8"?>
-<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink"
-     width="${W}" height="${H}" viewBox="0 0 ${W} ${H}">
-  <defs>
-    <style>
-      ${fontsCss}
-    </style>
-  </defs>
-  <rect width="${W}" height="${H}" fill="${esc(bg)}"/>
-  ${layersSvg}
-</svg>`;
-
-    // Render SVG string into PNG Buffer using sharp
-    const pngBuffer = await sharp(Buffer.from(svg))
-      .png({ quality: 100 })
-      .toBuffer();
-
-    return new NextResponse(pngBuffer as any, {
-      status: 200,
-      headers: {
-        "Content-Type": "image/png",
-        "Cache-Control": "no-cache",
-        "Access-Control-Allow-Origin": "*",
-      },
+    return new ImageResponse(element, {
+      width: W,
+      height: H,
+      fonts: fontsData
     });
+
   } catch (err) {
-    console.error("[GET /api/v1/image]", err);
+    console.error("[GET /api/v1/image] Satori render Error:", err);
     return NextResponse.json(
       { error: "Image rendering failed", details: String(err) },
       { status: 500 }
