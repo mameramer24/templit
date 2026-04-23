@@ -610,10 +610,10 @@ export default function CanvasEditor({
       if (!currentLayer) return;
 
       if (direction === "up" && idx < layers.length - 1) {
-        newLayers[idx] = newLayers[idx + 1];
+        newLayers[idx] = newLayers[idx + 1]!;
         newLayers[idx + 1] = currentLayer;
       } else if (direction === "down" && idx > 0) {
-        newLayers[idx] = newLayers[idx - 1];
+        newLayers[idx] = newLayers[idx - 1]!;
         newLayers[idx - 1] = currentLayer;
       } else {
         return;
