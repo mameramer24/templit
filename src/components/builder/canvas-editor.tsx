@@ -333,7 +333,7 @@ export default function CanvasEditor({
         src: url,
       };
       setLayers([...layers, newLayer]);
-      setSelectedLayerId(newLayer.id);
+      setSelectedId(newLayer.id);
     };
   };
 
