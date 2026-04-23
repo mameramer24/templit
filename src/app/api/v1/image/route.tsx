@@ -82,6 +82,49 @@ export async function GET(request: NextRequest) {
       }
     }
 
+    async function getGoogleFontBase64(fontFamily: string) {
+      const familyName = fontFamily.split(",")[0].replace(/['"]/g, "").trim();
+      if (!familyName || familyName === "sans-serif" || familyName === "serif") return null;
+
+      try {
+        const url = `https://fonts.googleapis.com/css2?family=${familyName.replace(/ /g, "+")}:wght@400;700`;
+        const cssRes = await fetch(url, {
+          headers: {
+            "User-Agent": "Mozilla/5.0 (Windows NT 6.1; rv:33.0) Gecko/20120101 Firefox/33.0"
+          }
+        });
+        if (!cssRes.ok) return null;
+        const cssText = await cssRes.text();
+        const ttfUrl = cssText.match(/url\((https:\/\/[^)]+\.ttf)\)/)?.[1];
+        if (!ttfUrl) return null;
+
+        const fontRes = await fetch(ttfUrl);
+        const arrayBuffer = await fontRes.arrayBuffer();
+        const buffer = Buffer.from(arrayBuffer);
+        return `
+@font-face {
+  font-family: '${familyName}';
+  src: url(data:font/ttf;base64,${buffer.toString("base64")}) format('truetype');
+}`;
+      } catch (err) {
+        console.error("Failed to fetch Google Font CSS for:", familyName, err);
+        return null;
+      }
+    }
+
+    // Pre-fetch all necessary fonts
+    const uniqueFonts = new Set<string>();
+    layers.forEach((l: any) => {
+      if (l.type === "text" && l.visible !== false) {
+        uniqueFonts.add(l.fontFamily || "Inter, sans-serif");
+      }
+    });
+
+    const fontStyles = await Promise.all(
+      Array.from(uniqueFonts).map(f => getGoogleFontBase64(f))
+    );
+    const fontsCss = fontStyles.filter(Boolean).join("\n");
+
     // Generate SVG elements for each layer
     const layersSvgPromises = layers
       .filter((l: any) => l.visible !== false)
@@ -110,8 +153,12 @@ export async function GET(request: NextRequest) {
           const lines = text.split("\n");
           const lineHeight = layer.lineHeight ? fontSize * layer.lineHeight : fontSize * 1.3;
 
+          // Check if text contains Arabic characters to apply RTL shaping safely
+          const isArabic = /[\u0600-\u06FF]/.test(text);
+          const dirAttr = isArabic ? 'direction="rtl"' : '';
+
           return lines.map((line: string, i: number) => 
-            `<text x="${anchorX}" y="${y + fontSize + (i * lineHeight)}" fill="${esc(fill)}" font-size="${fontSize}" opacity="${opacity}" text-anchor="${textAnchor}" letter-spacing="${letterSpacing}" font-family="Arial, sans-serif">${esc(line)}</text>`
+            `<text x="${anchorX}" y="${y + fontSize + (i * lineHeight)}" fill="${esc(fill)}" font-size="${fontSize}" opacity="${opacity}" text-anchor="${textAnchor}" letter-spacing="${letterSpacing}" font-family="${esc(layer.fontFamily || 'sans-serif')}" ${dirAttr}>${esc(line)}</text>`
           ).join("\n");
         }
 
@@ -132,6 +179,11 @@ export async function GET(request: NextRequest) {
     const svg = `<?xml version="1.0" encoding="UTF-8"?>
 <svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink"
      width="${W}" height="${H}" viewBox="0 0 ${W} ${H}">
+  <defs>
+    <style>
+      ${fontsCss}
+    </style>
+  </defs>
   <rect width="${W}" height="${H}" fill="${esc(bg)}"/>
   ${layersSvg}
 </svg>`;
