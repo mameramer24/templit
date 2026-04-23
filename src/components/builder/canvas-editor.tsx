@@ -89,6 +89,7 @@ interface CanvasLayer {
   cornerRadius?: number;
   // image
   src?: string;
+  name?: string; // Variable name for API replacements
 }
 
 interface CanvasConfig {
@@ -145,6 +146,22 @@ function makeDefaultRect(): CanvasLayer {
     stroke: "#4338ca",
     strokeWidth: 2,
     cornerRadius: 8,
+  };
+}
+
+function makePlaceholderImage(): CanvasLayer {
+  return {
+    id: generateId(),
+    type: "image",
+    x: 150,
+    y: 150,
+    width: 200,
+    height: 200,
+    rotation: 0,
+    opacity: 1,
+    locked: false,
+    visible: true,
+    src: "https://placehold.co/400x400/e2e8f0/64748b?text=Image+Placeholder",
   };
 }
 
@@ -428,6 +445,46 @@ export default function CanvasEditor({
     setSelectedId(null);
   }, [selectedId, layers, updateLayers]);
 
+  const handleLocalImageUpload = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    
+    const reader = new FileReader();
+    reader.onload = (event) => {
+       const base64 = event.target?.result as string;
+       // Create an image object to get original dimensions
+       const img = new Image();
+       img.onload = () => {
+         // Scale down if too large
+         let w = img.width;
+         let h = img.height;
+         const MAX = 600;
+         if (w > MAX || h > MAX) {
+           const ratio = Math.min(MAX / w, MAX / h);
+           w *= ratio;
+           h *= ratio;
+         }
+         addLayer({
+           id: generateId(),
+           type: "image",
+           x: 50,
+           y: 50,
+           width: w,
+           height: h,
+           rotation: 0,
+           opacity: 1,
+           locked: false,
+           visible: true,
+           src: base64,
+           name: "background_or_image",
+         });
+       };
+       img.src = base64;
+    };
+    reader.readAsDataURL(file);
+    e.target.value = '';
+  }, [addLayer]);
+
   const updateLayer = useCallback(
     (id: string, updates: Partial<CanvasLayer>) => {
       const newLayers = layers.map((l) =>
@@ -606,6 +663,35 @@ export default function CanvasEditor({
             <Square className="h-4 w-4 mr-1" />
             Rect
           </Button>
+
+          <Button
+            id="add-placeholder-btn"
+            size="sm"
+            variant="ghost"
+            onClick={() => addLayer(makePlaceholderImage())}
+            className="text-white/70 hover:text-white hover:bg-white/10"
+          >
+            <ImageIcon className="h-4 w-4 mr-1" />
+            Placeholder
+          </Button>
+
+          <div className="relative group overflow-hidden">
+            <Button
+              size="sm"
+              variant="ghost"
+              className="text-indigo-400 hover:text-indigo-300 hover:bg-indigo-500/10 border border-indigo-500/20"
+            >
+              <Plus className="h-4 w-4 mr-1" />
+              Upload Image
+            </Button>
+            <input 
+              type="file" 
+              accept="image/*" 
+              onChange={handleLocalImageUpload}
+              className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+              title="Upload from computer"
+            />
+          </div>
 
           <Separator orientation="vertical" className="h-6 bg-white/10" />
 
@@ -984,6 +1070,23 @@ export default function CanvasEditor({
                     Send Backward
                   </Button>
                 </div>
+              </div>
+
+              <div className="space-y-1 mt-4 pt-4 border-t border-white/10">
+                <label className="text-xs text-white flex justify-between">
+                  <span>API Variable Name</span>
+                  <span className="text-[10px] text-white/40">Optional</span>
+                </label>
+                <p className="text-[10px] text-white/40 leading-snug">
+                  Give this layer a name (e.g. <span className="text-indigo-300">avatar</span>, <span className="text-indigo-300">title</span>) so you can send dynamic content to it via the API.
+                </p>
+                <Input
+                  id="layer-name"
+                  value={selectedLayer.name || ""}
+                  onChange={(e) => updateLayer(selectedLayer.id, { name: e.target.value })}
+                  placeholder="e.g. name2"
+                  className="h-8 bg-black/40 border-indigo-500/30 focus-visible:border-indigo-400 text-indigo-100 text-xs font-mono"
+                />
               </div>
 
               {selectedLayer.type === "text" && (
