@@ -51,16 +51,21 @@ async function handleRender(request: NextRequest) {
 
     const renderId = `rnd_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
 
+    // Build the image URL with variables encoded as base64
+    const varsBase64 = Buffer.from(JSON.stringify(variables ?? {})).toString("base64");
+    const baseUrl = request.headers.get("origin") || request.headers.get("referer")?.split("/").slice(0, 3).join("/") || "https://templit-azure.vercel.app";
+    const imageUrl = `${baseUrl}/api/v1/image?templateId=${template.id}&vars=${encodeURIComponent(varsBase64)}`;
+
     return NextResponse.json({
       success: true,
       data: {
         id: renderId,
         templateId: template.id,
         templateName: template.name,
-        status: "processing",
+        status: "ready",
         format,
-        variables: variables ?? {},
-        message: "Render job queued successfully.",
+        imageUrl,
+        message: "Image rendered successfully. Use imageUrl to access the PNG.",
       }
     }, { status: 201 });
 
