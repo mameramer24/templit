@@ -297,6 +297,98 @@ function RectShape({ layer, isSelected, onSelect, onChange }: ShapeProps) {
   );
 }
 
+function useImage(url: string | undefined, crossOrigin = "anonymous") {
+  const [image, setImage] = useState<HTMLImageElement | undefined>(undefined);
+  const [status, setStatus] = useState("loading");
+
+  React.useEffect(() => {
+    if (!url) {
+      setStatus("loaded");
+      return;
+    }
+
+    const img = new Image();
+    img.crossOrigin = crossOrigin;
+
+    const onLoad = () => {
+      setImage(img);
+      setStatus("loaded");
+    };
+
+    const onError = () => {
+      setImage(undefined);
+      setStatus("failed");
+    };
+
+    img.addEventListener("load", onLoad);
+    img.addEventListener("error", onError);
+    img.src = url;
+
+    return () => {
+      img.removeEventListener("load", onLoad);
+      img.removeEventListener("error", onError);
+    };
+  }, [url, crossOrigin]);
+
+  return [image, status] as const;
+}
+
+function ImageShape({ layer, isSelected, onSelect, onChange }: ShapeProps) {
+  const shapeRef = useRef<Konva.Image>(null);
+  const trRef = useRef<Konva.Transformer>(null);
+  const [image] = useImage(layer.src);
+
+  React.useEffect(() => {
+    if (isSelected && trRef.current && shapeRef.current) {
+      trRef.current.nodes([shapeRef.current]);
+      trRef.current.getLayer()?.batchDraw();
+    }
+  }, [isSelected, image]);
+
+  return (
+    <>
+      <KonvaImage
+        ref={shapeRef}
+        id={layer.id}
+        x={layer.x}
+        y={layer.y}
+        width={layer.width}
+        height={layer.height}
+        rotation={layer.rotation}
+        opacity={layer.opacity}
+        visible={layer.visible}
+        image={image}
+        draggable={!layer.locked}
+        onClick={onSelect}
+        onTap={onSelect}
+        onDragEnd={(e) => onChange({ x: e.target.x(), y: e.target.y() })}
+        onTransformEnd={() => {
+          const node = shapeRef.current;
+          if (!node) return;
+          onChange({
+            x: node.x(),
+            y: node.y(),
+            width: Math.max(5, node.width() * node.scaleX()),
+            height: Math.max(5, node.height() * node.scaleY()),
+            rotation: node.rotation(),
+          });
+          node.scaleX(1);
+          node.scaleY(1);
+        }}
+      />
+      {isSelected && (
+        <Transformer
+          ref={trRef}
+          flipEnabled={false}
+          boundBoxFunc={(oldBox, newBox) =>
+            newBox.width < 5 || newBox.height < 5 ? oldBox : newBox
+          }
+        />
+      )}
+    </>
+  );
+}
+
 // ── Main Editor ───────────────────────────────────────────────────────────────
 
 export default function CanvasEditor({
@@ -880,6 +972,7 @@ export default function CanvasEditor({
 
                   if (layer.type === "text") return <TextShape key={layer.id} {...props} />;
                   if (layer.type === "rect") return <RectShape key={layer.id} {...props} />;
+                  if (layer.type === "image") return <ImageShape key={layer.id} {...props} />;
                   return null;
                 })}
               </Layer>
