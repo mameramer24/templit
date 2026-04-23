@@ -395,10 +395,12 @@ export default function CanvasEditor({
   template,
   onCanvasChange,
 }: CanvasEditorProps) {
-  // ── Fonts ────────────────────────────────────────────────────────────────
   const FONTS = [
     { name: "Inter", value: "Inter, sans-serif" },
     { name: "Cairo (Arabic)", value: "Cairo, sans-serif" },
+    { name: "Tajawal (Arabic)", value: "Tajawal, sans-serif" },
+    { name: "beIN Normal (Arabic)", value: "beIN Normal, sans-serif" },
+    { name: "Dubai (Arabic)", value: "Dubai, sans-serif" },
     { name: "Montserrat", value: "Montserrat, sans-serif" },
     { name: "Playfair Display", value: "Playfair Display, serif" },
     { name: "Oswald", value: "Oswald, sans-serif" },

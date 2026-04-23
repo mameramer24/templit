@@ -86,6 +86,32 @@ export async function GET(request: NextRequest) {
       const familyName = fontFamily.split(",")[0].replace(/['"]/g, "").trim();
       if (!familyName || familyName === "sans-serif" || familyName === "serif") return null;
 
+      // Handle Custom External Fonts (beIN / Dubai)
+      let externalUrl = "";
+      if (familyName === "beIN Normal") {
+        externalUrl = "https://raw.githubusercontent.com/abdalali/fonts/master/beIN-Normal.ttf";
+      } else if (familyName === "Dubai") {
+        externalUrl = "https://raw.githubusercontent.com/MizterThe1st/fonts/master/Dubai-Regular.ttf";
+      }
+
+      if (externalUrl) {
+        try {
+          const res = await fetch(externalUrl);
+          if (res.ok) {
+            const arrayBuffer = await res.arrayBuffer();
+            const buffer = Buffer.from(arrayBuffer);
+            return `
+@font-face {
+  font-family: '${familyName}';
+  src: url(data:font/ttf;base64,${buffer.toString("base64")}) format('truetype');
+}`;
+          }
+        } catch(e) {
+          console.error("Failed to fetch custom external font:", familyName);
+        }
+      }
+
+      // Handle standard Google Fonts
       try {
         const url = `https://fonts.googleapis.com/css2?family=${familyName.replace(/ /g, "+")}:wght@400;700`;
         const cssRes = await fetch(url, {
