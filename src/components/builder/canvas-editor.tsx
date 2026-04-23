@@ -80,6 +80,9 @@ interface CanvasLayer {
   fontSize?: number;
   fontFamily?: string;
   fill?: string;
+  lineHeight?: number;
+  letterSpacing?: number;
+  align?: "left" | "center" | "right";
   // rect
   stroke?: string;
   strokeWidth?: number;
@@ -181,6 +184,9 @@ function TextShape({ layer, isSelected, onSelect, onChange }: ShapeProps) {
         fontSize={layer.fontSize ?? 24}
         fontFamily={layer.fontFamily ?? "sans-serif"}
         fill={layer.fill ?? "#000000"}
+        lineHeight={layer.lineHeight ?? 1}
+        letterSpacing={layer.letterSpacing ?? 0}
+        align={layer.align ?? "left"}
         draggable={!layer.locked}
         onClick={onSelect}
         onTap={onSelect}
@@ -981,6 +987,61 @@ export default function CanvasEditor({
                       }
                       className="h-7 bg-white/5 border-white/10 text-white text-xs"
                     />
+                  </div>
+
+                  <div className="space-y-1">
+                    <label className="text-xs text-white/50">Line Height ({selectedLayer.lineHeight ?? 1})</label>
+                    <input
+                      type="range"
+                      min={0.5}
+                      max={3}
+                      step={0.1}
+                      value={selectedLayer.lineHeight ?? 1}
+                      onChange={(e) => updateLayer(selectedLayer.id, { lineHeight: parseFloat(e.target.value) })}
+                      className="w-full accent-indigo-500 h-1.5 rounded-lg appearance-none bg-white/10"
+                    />
+                  </div>
+
+                  <div className="space-y-1">
+                    <label className="text-xs text-white/50">Letter Spacing ({selectedLayer.letterSpacing ?? 0}px)</label>
+                    <input
+                      type="range"
+                      min={-10}
+                      max={50}
+                      step={1}
+                      value={selectedLayer.letterSpacing ?? 0}
+                      onChange={(e) => updateLayer(selectedLayer.id, { letterSpacing: parseInt(e.target.value) })}
+                      className="w-full accent-indigo-500 h-1.5 rounded-lg appearance-none bg-white/10"
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-xs text-white/50">Alignment</label>
+                    <div className="flex gap-1 bg-white/5 p-1 rounded-lg">
+                       <Button 
+                         variant="ghost" 
+                         size="sm" 
+                         className={`flex-1 h-7 ${selectedLayer.align === "left" ? "bg-indigo-600/20 text-indigo-400" : "text-white/40"}`}
+                         onClick={() => updateLayer(selectedLayer.id, { align: "left" })}
+                       >
+                          Left
+                       </Button>
+                       <Button 
+                         variant="ghost" 
+                         size="sm" 
+                         className={`flex-1 h-7 ${selectedLayer.align === "center" ? "bg-indigo-600/20 text-indigo-400" : "text-white/40"}`}
+                         onClick={() => updateLayer(selectedLayer.id, { align: "center" })}
+                       >
+                          Center
+                       </Button>
+                       <Button 
+                         variant="ghost" 
+                         size="sm" 
+                         className={`flex-1 h-7 ${selectedLayer.align === "right" ? "bg-indigo-600/20 text-indigo-400" : "text-white/40"}`}
+                         onClick={() => updateLayer(selectedLayer.id, { align: "right" })}
+                       >
+                          Right
+                       </Button>
+                    </div>
                   </div>
                 </>
               )}
