@@ -819,7 +819,7 @@ export default function CanvasEditor({
               scaleY={scale}
               x={stagePos.x}
               y={stagePos.y}
-              draggable
+              draggable={false}
               onDragEnd={(e) => {
                 setStagePos({ x: e.target.x(), y: e.target.y() });
               }}
