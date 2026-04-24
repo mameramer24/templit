@@ -183,7 +183,7 @@ export async function GET(request: NextRequest) {
                   width: w,
                   height: h,
                   opacity,
-                  objectFit: "fill"
+                  objectFit: layer.objectFit || "cover"
                 }}
               />
             );

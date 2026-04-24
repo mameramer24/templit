@@ -92,6 +92,7 @@ interface CanvasLayer {
   // image
   src?: string;
   name?: string; // Variable name for API replacements
+  objectFit?: "fill" | "cover" | "contain";
 }
 
 interface CanvasConfig {
@@ -1284,6 +1285,25 @@ export default function CanvasEditor({
                     </div>
                   </div>
                 </>
+              )}
+
+              {selectedLayer.type === "image" && (
+                <div className="space-y-1">
+                  <label className="text-xs text-white/50">Image Fit Behavior</label>
+                  <Select
+                    value={selectedLayer.objectFit || "cover"}
+                    onValueChange={(val: any) => updateLayer(selectedLayer.id, { objectFit: val })}
+                  >
+                    <SelectTrigger className="h-7 bg-white/5 border-white/10 text-white text-[10px]">
+                      <SelectValue placeholder="Fit behavior" />
+                    </SelectTrigger>
+                    <SelectContent className="bg-[#121225] border-white/10 text-white">
+                      <SelectItem value="cover">Cover (Crop excess - Recommended)</SelectItem>
+                      <SelectItem value="contain">Contain (Fit completely without crop)</SelectItem>
+                      <SelectItem value="fill">Fill (Stretch / Distort)</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
               )}
 
               <div className="space-y-1">
