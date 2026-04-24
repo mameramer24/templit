@@ -159,12 +159,12 @@ export async function GET(request: NextRequest) {
 
           const shadow = (layer.shadowOpacity && layer.shadowOpacity > 0 && layer.shadowColor)
             ? `${layer.shadowOffsetX || 0}px ${layer.shadowOffsetY || 0}px ${layer.shadowBlur || 0}px ${hexToRgba(layer.shadowColor, layer.shadowOpacity)}`
-            : undefined;
+            : null;
 
-          const radiusTL = Array.isArray(layer.cornerRadius) ? (layer.cornerRadius[0] || 0) : (layer.cornerRadius || 0);
-          const radiusTR = Array.isArray(layer.cornerRadius) ? (layer.cornerRadius[1] || 0) : (layer.cornerRadius || 0);
-          const radiusBR = Array.isArray(layer.cornerRadius) ? (layer.cornerRadius[2] || 0) : (layer.cornerRadius || 0);
-          const radiusBL = Array.isArray(layer.cornerRadius) ? (layer.cornerRadius[3] || 0) : (layer.cornerRadius || 0);
+          const radiusTL = (Array.isArray(layer.cornerRadius) ? (layer.cornerRadius[0] || 0) : (layer.cornerRadius || 0)) + "px";
+          const radiusTR = (Array.isArray(layer.cornerRadius) ? (layer.cornerRadius[1] || 0) : (layer.cornerRadius || 0)) + "px";
+          const radiusBR = (Array.isArray(layer.cornerRadius) ? (layer.cornerRadius[2] || 0) : (layer.cornerRadius || 0)) + "px";
+          const radiusBL = (Array.isArray(layer.cornerRadius) ? (layer.cornerRadius[3] || 0) : (layer.cornerRadius || 0)) + "px";
 
           if (layer.type === "rect") {
             return (
@@ -182,7 +182,7 @@ export async function GET(request: NextRequest) {
                   borderTopRightRadius: radiusTR,
                   borderBottomRightRadius: radiusBR,
                   borderBottomLeftRadius: radiusBL,
-                  boxShadow: shadow,
+                  ...(shadow ? { boxShadow: shadow } : {}),
                   opacity
                 }}
               />
@@ -207,7 +207,7 @@ export async function GET(request: NextRequest) {
                   borderTopRightRadius: radiusTR,
                   borderBottomRightRadius: radiusBR,
                   borderBottomLeftRadius: radiusBL,
-                  boxShadow: shadow,
+                  ...(shadow ? { boxShadow: shadow } : {}),
                   objectFit: layer.objectFit || "cover"
                 }}
               />
@@ -238,7 +238,7 @@ export async function GET(request: NextRequest) {
                   fontFamily: `"${familyName}"`,
                   letterSpacing: layer.letterSpacing ?? 0,
                   opacity,
-                  textShadow: shadow,
+                  ...(shadow ? { textShadow: shadow } : {}),
                   lineHeight: layer.lineHeight || 1.3,
                   justifyContent: layer.align === "center" ? "center" : layer.align === "right" ? "flex-end" : "flex-start",
                   alignItems: layer.align === "center" ? "center" : layer.align === "right" ? "flex-end" : "flex-start",
