@@ -77,6 +77,14 @@ interface CanvasLayer {
   opacity: number;
   locked: boolean;
   visible: boolean;
+  
+  // shadow
+  shadowColor?: string;
+  shadowBlur?: number;
+  shadowOffsetX?: number;
+  shadowOffsetY?: number;
+  shadowOpacity?: number;
+  
   // text
   text?: string;
   fontSize?: number;
@@ -213,6 +221,11 @@ function TextShape({ layer, isSelected, onSelect, onChange }: ShapeProps) {
         fontFamily={family}
         fontStyle={style}
         fill={layer.fill ?? "#000000"}
+        shadowColor={layer.shadowColor}
+        shadowBlur={layer.shadowBlur}
+        shadowOffsetX={layer.shadowOffsetX}
+        shadowOffsetY={layer.shadowOffsetY}
+        shadowOpacity={layer.shadowOpacity}
         lineHeight={layer.lineHeight ?? 1}
         letterSpacing={layer.letterSpacing ?? 0}
         align={layer.align ?? "left"}
@@ -273,6 +286,11 @@ function RectShape({ layer, isSelected, onSelect, onChange }: ShapeProps) {
         opacity={layer.opacity}
         visible={layer.visible}
         fill={layer.fill ?? "#6366f1"}
+        shadowColor={layer.shadowColor}
+        shadowBlur={layer.shadowBlur}
+        shadowOffsetX={layer.shadowOffsetX}
+        shadowOffsetY={layer.shadowOffsetY}
+        shadowOpacity={layer.shadowOpacity}
         {...(layer.stroke !== undefined ? { stroke: layer.stroke } : {})}
         {...(layer.strokeWidth !== undefined ? { strokeWidth: layer.strokeWidth } : {})}
         cornerRadius={layer.cornerRadius ?? 0}
@@ -369,6 +387,11 @@ function ImageShape({ layer, isSelected, onSelect, onChange }: ShapeProps) {
         rotation={layer.rotation}
         opacity={layer.opacity}
         visible={layer.visible}
+        shadowColor={layer.shadowColor}
+        shadowBlur={layer.shadowBlur}
+        shadowOffsetX={layer.shadowOffsetX}
+        shadowOffsetY={layer.shadowOffsetY}
+        shadowOpacity={layer.shadowOpacity}
         image={image}
         draggable={!layer.locked}
         onClick={onSelect}
@@ -1346,6 +1369,73 @@ export default function CanvasEditor({
                   }
                   className="w-full accent-indigo-500"
                 />
+              </div>
+
+              <div className="space-y-3 pt-4 mt-4 border-t border-white/10">
+                <label className="text-[11px] text-white font-semibold flex items-center justify-between">
+                  Drop Shadow
+                </label>
+                
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="space-y-1.5">
+                    <label className="text-[10px] text-white/40">Color</label>
+                    <div className="flex gap-2 items-center">
+                      <input
+                        type="color"
+                        value={selectedLayer.shadowColor ?? "#000000"}
+                        onChange={(e) => updateLayer(selectedLayer.id, { shadowColor: e.target.value })}
+                        className="h-6 w-8 rounded cursor-pointer border-0 bg-transparent shrink-0"
+                      />
+                      <Input
+                        value={selectedLayer.shadowColor ?? "#000000"}
+                        onChange={(e) => updateLayer(selectedLayer.id, { shadowColor: e.target.value })}
+                        className="h-6 flex-1 bg-white/5 border-white/10 text-white text-[10px] font-mono px-1.5"
+                      />
+                    </div>
+                  </div>
+                  <div className="space-y-1.5">
+                    <label className="text-[10px] text-white/40">Opacity ({(selectedLayer.shadowOpacity ?? 0) * 100}%)</label>
+                    <input
+                      type="range"
+                      min={0}
+                      max={1}
+                      step={0.05}
+                      value={selectedLayer.shadowOpacity ?? 0}
+                      onChange={(e) => updateLayer(selectedLayer.id, { shadowOpacity: parseFloat(e.target.value) })}
+                      className="w-full accent-indigo-500 h-1.5 rounded-lg appearance-none bg-white/10 mt-2"
+                    />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-3 gap-2">
+                  <div className="space-y-1">
+                    <label className="text-[10px] text-white/40 pt-1">Blur</label>
+                    <Input
+                      type="number"
+                      value={selectedLayer.shadowBlur ?? 0}
+                      onChange={(e) => updateLayer(selectedLayer.id, { shadowBlur: parseInt(e.target.value) || 0 })}
+                      className="h-6 bg-white/5 border-white/10 text-white text-xs px-2"
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-[10px] text-white/40 pt-1">Offset X</label>
+                    <Input
+                      type="number"
+                      value={selectedLayer.shadowOffsetX ?? 0}
+                      onChange={(e) => updateLayer(selectedLayer.id, { shadowOffsetX: parseInt(e.target.value) || 0 })}
+                      className="h-6 bg-white/5 border-white/10 text-white text-xs px-2"
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-[10px] text-white/40 pt-1">Offset Y</label>
+                    <Input
+                      type="number"
+                      value={selectedLayer.shadowOffsetY ?? 0}
+                      onChange={(e) => updateLayer(selectedLayer.id, { shadowOffsetY: parseInt(e.target.value) || 0 })}
+                      className="h-6 bg-white/5 border-white/10 text-white text-xs px-2"
+                    />
+                  </div>
+                </div>
               </div>
             </>
           )}

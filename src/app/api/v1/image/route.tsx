@@ -80,6 +80,14 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: "Template not found" }, { status: 404 });
     }
 
+    function hexToRgba(hex: string, alpha: number) {
+      if (!hex.startsWith("#")) return hex;
+      const r = parseInt(hex.slice(1, 3), 16) || 0;
+      const g = parseInt(hex.slice(3, 5), 16) || 0;
+      const b = parseInt(hex.slice(5, 7), 16) || 0;
+      return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+    }
+
     const canvas = template.canvas as { width: number; height: number; background: string; };
     const layers = (template.layers as any[]) || [];
     const W = canvas.width || 1200;
@@ -149,6 +157,10 @@ export async function GET(request: NextRequest) {
           const h = Math.round(layer.height ?? 40);
           const opacity = layer.opacity ?? 1;
 
+          const shadow = (layer.shadowOpacity && layer.shadowOpacity > 0 && layer.shadowColor)
+            ? `${layer.shadowOffsetX || 0}px ${layer.shadowOffsetY || 0}px ${layer.shadowBlur || 0}px ${hexToRgba(layer.shadowColor, layer.shadowOpacity)}`
+            : undefined;
+
           if (layer.type === "rect") {
             const rx = layer.cornerRadius ?? 0;
             return (
@@ -163,6 +175,7 @@ export async function GET(request: NextRequest) {
                   height: h,
                   backgroundColor: layer.fill || "#cccccc",
                   borderRadius: rx,
+                  boxShadow: shadow,
                   opacity
                 }}
               />
@@ -183,6 +196,7 @@ export async function GET(request: NextRequest) {
                   width: w,
                   height: h,
                   opacity,
+                  boxShadow: shadow,
                   objectFit: layer.objectFit || "cover"
                 }}
               />
@@ -213,6 +227,7 @@ export async function GET(request: NextRequest) {
                   fontFamily: `"${familyName}"`,
                   letterSpacing: layer.letterSpacing ?? 0,
                   opacity,
+                  textShadow: shadow,
                   lineHeight: layer.lineHeight || 1.3,
                   justifyContent: layer.align === "center" ? "center" : layer.align === "right" ? "flex-end" : "flex-start",
                   alignItems: layer.align === "center" ? "center" : layer.align === "right" ? "flex-end" : "flex-start",
