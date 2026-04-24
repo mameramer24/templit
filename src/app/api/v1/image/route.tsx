@@ -161,9 +161,10 @@ export async function GET(request: NextRequest) {
             ? `${layer.shadowOffsetX || 0}px ${layer.shadowOffsetY || 0}px ${layer.shadowBlur || 0}px ${hexToRgba(layer.shadowColor, layer.shadowOpacity)}`
             : undefined;
 
-          const rx = Array.isArray(layer.cornerRadius)
-            ? `${layer.cornerRadius[0] || 0}px ${layer.cornerRadius[1] || 0}px ${layer.cornerRadius[2] || 0}px ${layer.cornerRadius[3] || 0}px`
-            : `${layer.cornerRadius || 0}px`;
+          const radiusTL = Array.isArray(layer.cornerRadius) ? (layer.cornerRadius[0] || 0) : (layer.cornerRadius || 0);
+          const radiusTR = Array.isArray(layer.cornerRadius) ? (layer.cornerRadius[1] || 0) : (layer.cornerRadius || 0);
+          const radiusBR = Array.isArray(layer.cornerRadius) ? (layer.cornerRadius[2] || 0) : (layer.cornerRadius || 0);
+          const radiusBL = Array.isArray(layer.cornerRadius) ? (layer.cornerRadius[3] || 0) : (layer.cornerRadius || 0);
 
           if (layer.type === "rect") {
             return (
@@ -177,7 +178,10 @@ export async function GET(request: NextRequest) {
                   width: w,
                   height: h,
                   backgroundColor: layer.fill || "#cccccc",
-                  borderRadius: rx,
+                  borderTopLeftRadius: radiusTL,
+                  borderTopRightRadius: radiusTR,
+                  borderBottomRightRadius: radiusBR,
+                  borderBottomLeftRadius: radiusBL,
                   boxShadow: shadow,
                   opacity
                 }}
@@ -199,7 +203,10 @@ export async function GET(request: NextRequest) {
                   width: w,
                   height: h,
                   opacity,
-                  borderRadius: rx,
+                  borderTopLeftRadius: radiusTL,
+                  borderTopRightRadius: radiusTR,
+                  borderBottomRightRadius: radiusBR,
+                  borderBottomLeftRadius: radiusBL,
                   boxShadow: shadow,
                   objectFit: layer.objectFit || "cover"
                 }}
