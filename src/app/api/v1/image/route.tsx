@@ -161,8 +161,11 @@ export async function GET(request: NextRequest) {
             ? `${layer.shadowOffsetX || 0}px ${layer.shadowOffsetY || 0}px ${layer.shadowBlur || 0}px ${hexToRgba(layer.shadowColor, layer.shadowOpacity)}`
             : undefined;
 
+          const rx = Array.isArray(layer.cornerRadius)
+            ? `${layer.cornerRadius[0] || 0}px ${layer.cornerRadius[1] || 0}px ${layer.cornerRadius[2] || 0}px ${layer.cornerRadius[3] || 0}px`
+            : `${layer.cornerRadius || 0}px`;
+
           if (layer.type === "rect") {
-            const rx = layer.cornerRadius ?? 0;
             return (
               <div
                 key={layer.id}
@@ -196,6 +199,7 @@ export async function GET(request: NextRequest) {
                   width: w,
                   height: h,
                   opacity,
+                  borderRadius: rx,
                   boxShadow: shadow,
                   objectFit: layer.objectFit || "cover"
                 }}

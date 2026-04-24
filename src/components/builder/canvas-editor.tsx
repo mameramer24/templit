@@ -96,7 +96,7 @@ interface CanvasLayer {
   // rect
   stroke?: string;
   strokeWidth?: number;
-  cornerRadius?: number;
+  cornerRadius?: number | [number, number, number, number];
   // image
   src?: string;
   name?: string; // Variable name for API replacements
@@ -404,6 +404,7 @@ function ImageShape({ layer, isSelected, onSelect, onChange }: ShapeProps) {
         opacity={layer.opacity}
         visible={layer.visible}
         {...shadowProps}
+        cornerRadius={layer.cornerRadius ?? 0}
         image={image}
         draggable={!layer.locked}
         onClick={onSelect}
@@ -1320,6 +1321,76 @@ export default function CanvasEditor({
                     </div>
                   </div>
                 </>
+              )}
+
+              {(selectedLayer.type === "rect" || selectedLayer.type === "image") && (
+                <div className="space-y-2 pt-2 pb-2 border-b border-white/5">
+                  <label className="text-[11px] text-white/70 font-semibold flex items-center justify-between">
+                    Corner Radius (px)
+                  </label>
+                  <div className="grid grid-cols-4 gap-1.5">
+                    <div className="flex flex-col items-center gap-1">
+                      <Input
+                        type="number"
+                        title="Top Left"
+                        value={Array.isArray(selectedLayer.cornerRadius) ? selectedLayer.cornerRadius[0] : (selectedLayer.cornerRadius ?? 0)}
+                        onChange={(e) => {
+                          const val = parseInt(e.target.value) || 0;
+                          const curr = Array.isArray(selectedLayer.cornerRadius) ? [...selectedLayer.cornerRadius] : [selectedLayer.cornerRadius ?? 0, selectedLayer.cornerRadius ?? 0, selectedLayer.cornerRadius ?? 0, selectedLayer.cornerRadius ?? 0];
+                          curr[0] = val;
+                          updateLayer(selectedLayer.id, { cornerRadius: curr as [number,number,number,number] });
+                        }}
+                        className="h-6 bg-white/5 border-white/10 text-white text-[10px] px-1 text-center w-full"
+                      />
+                      <span className="text-[8px] text-white/30 tracking-widest font-mono">TL</span>
+                    </div>
+                    <div className="flex flex-col items-center gap-1">
+                      <Input
+                        type="number"
+                        title="Top Right"
+                        value={Array.isArray(selectedLayer.cornerRadius) ? selectedLayer.cornerRadius[1] : (selectedLayer.cornerRadius ?? 0)}
+                        onChange={(e) => {
+                          const val = parseInt(e.target.value) || 0;
+                          const curr = Array.isArray(selectedLayer.cornerRadius) ? [...selectedLayer.cornerRadius] : [selectedLayer.cornerRadius ?? 0, selectedLayer.cornerRadius ?? 0, selectedLayer.cornerRadius ?? 0, selectedLayer.cornerRadius ?? 0];
+                          curr[1] = val;
+                          updateLayer(selectedLayer.id, { cornerRadius: curr as [number,number,number,number] });
+                        }}
+                        className="h-6 bg-white/5 border-white/10 text-white text-[10px] px-1 text-center w-full"
+                      />
+                      <span className="text-[8px] text-white/30 tracking-widest font-mono">TR</span>
+                    </div>
+                    <div className="flex flex-col items-center gap-1">
+                      <Input
+                        type="number"
+                        title="Bottom Right"
+                        value={Array.isArray(selectedLayer.cornerRadius) ? selectedLayer.cornerRadius[2] : (selectedLayer.cornerRadius ?? 0)}
+                        onChange={(e) => {
+                          const val = parseInt(e.target.value) || 0;
+                          const curr = Array.isArray(selectedLayer.cornerRadius) ? [...selectedLayer.cornerRadius] : [selectedLayer.cornerRadius ?? 0, selectedLayer.cornerRadius ?? 0, selectedLayer.cornerRadius ?? 0, selectedLayer.cornerRadius ?? 0];
+                          curr[2] = val;
+                          updateLayer(selectedLayer.id, { cornerRadius: curr as [number,number,number,number] });
+                        }}
+                        className="h-6 bg-white/5 border-white/10 text-white text-[10px] px-1 text-center w-full"
+                      />
+                      <span className="text-[8px] text-white/30 tracking-widest font-mono">BR</span>
+                    </div>
+                    <div className="flex flex-col items-center gap-1">
+                      <Input
+                        type="number"
+                        title="Bottom Left"
+                        value={Array.isArray(selectedLayer.cornerRadius) ? selectedLayer.cornerRadius[3] : (selectedLayer.cornerRadius ?? 0)}
+                        onChange={(e) => {
+                          const val = parseInt(e.target.value) || 0;
+                          const curr = Array.isArray(selectedLayer.cornerRadius) ? [...selectedLayer.cornerRadius] : [selectedLayer.cornerRadius ?? 0, selectedLayer.cornerRadius ?? 0, selectedLayer.cornerRadius ?? 0, selectedLayer.cornerRadius ?? 0];
+                          curr[3] = val;
+                          updateLayer(selectedLayer.id, { cornerRadius: curr as [number,number,number,number] });
+                        }}
+                        className="h-6 bg-white/5 border-white/10 text-white text-[10px] px-1 text-center w-full"
+                      />
+                      <span className="text-[8px] text-white/30 tracking-widest font-mono">BL</span>
+                    </div>
+                  </div>
+                </div>
               )}
 
               {selectedLayer.type === "image" && (
