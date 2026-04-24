@@ -1027,7 +1027,7 @@ export default function CanvasEditor({
           </span>
         </div>
 
-        <div className="p-3 space-y-4">
+        <div className="p-3 space-y-4 pb-32">
           {!selectedLayer ? (
             /* Canvas properties */
             <>
