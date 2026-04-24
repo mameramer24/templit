@@ -204,6 +204,14 @@ function TextShape({ layer, isSelected, onSelect, onChange }: ShapeProps) {
     if (parts[1] === "700") style = "bold";
   }
 
+  const shadowProps = {
+    ...(layer.shadowColor ? { shadowColor: layer.shadowColor } : {}),
+    ...(layer.shadowBlur !== undefined ? { shadowBlur: layer.shadowBlur } : {}),
+    ...(layer.shadowOffsetX !== undefined ? { shadowOffsetX: layer.shadowOffsetX } : {}),
+    ...(layer.shadowOffsetY !== undefined ? { shadowOffsetY: layer.shadowOffsetY } : {}),
+    ...(layer.shadowOpacity !== undefined ? { shadowOpacity: layer.shadowOpacity } : {}),
+  };
+
   return (
     <>
       <Text
@@ -221,11 +229,7 @@ function TextShape({ layer, isSelected, onSelect, onChange }: ShapeProps) {
         fontFamily={family}
         fontStyle={style}
         fill={layer.fill ?? "#000000"}
-        shadowColor={layer.shadowColor}
-        shadowBlur={layer.shadowBlur}
-        shadowOffsetX={layer.shadowOffsetX}
-        shadowOffsetY={layer.shadowOffsetY}
-        shadowOpacity={layer.shadowOpacity}
+        {...shadowProps}
         lineHeight={layer.lineHeight ?? 1}
         letterSpacing={layer.letterSpacing ?? 0}
         align={layer.align ?? "left"}
@@ -273,6 +277,14 @@ function RectShape({ layer, isSelected, onSelect, onChange }: ShapeProps) {
     }
   }, [isSelected]);
 
+  const shadowProps = {
+    ...(layer.shadowColor ? { shadowColor: layer.shadowColor } : {}),
+    ...(layer.shadowBlur !== undefined ? { shadowBlur: layer.shadowBlur } : {}),
+    ...(layer.shadowOffsetX !== undefined ? { shadowOffsetX: layer.shadowOffsetX } : {}),
+    ...(layer.shadowOffsetY !== undefined ? { shadowOffsetY: layer.shadowOffsetY } : {}),
+    ...(layer.shadowOpacity !== undefined ? { shadowOpacity: layer.shadowOpacity } : {}),
+  };
+
   return (
     <>
       <Rect
@@ -286,11 +298,7 @@ function RectShape({ layer, isSelected, onSelect, onChange }: ShapeProps) {
         opacity={layer.opacity}
         visible={layer.visible}
         fill={layer.fill ?? "#6366f1"}
-        shadowColor={layer.shadowColor}
-        shadowBlur={layer.shadowBlur}
-        shadowOffsetX={layer.shadowOffsetX}
-        shadowOffsetY={layer.shadowOffsetY}
-        shadowOpacity={layer.shadowOpacity}
+        {...shadowProps}
         {...(layer.stroke !== undefined ? { stroke: layer.stroke } : {})}
         {...(layer.strokeWidth !== undefined ? { strokeWidth: layer.strokeWidth } : {})}
         cornerRadius={layer.cornerRadius ?? 0}
@@ -375,6 +383,14 @@ function ImageShape({ layer, isSelected, onSelect, onChange }: ShapeProps) {
     }
   }, [isSelected, image]);
 
+  const shadowProps = {
+    ...(layer.shadowColor ? { shadowColor: layer.shadowColor } : {}),
+    ...(layer.shadowBlur !== undefined ? { shadowBlur: layer.shadowBlur } : {}),
+    ...(layer.shadowOffsetX !== undefined ? { shadowOffsetX: layer.shadowOffsetX } : {}),
+    ...(layer.shadowOffsetY !== undefined ? { shadowOffsetY: layer.shadowOffsetY } : {}),
+    ...(layer.shadowOpacity !== undefined ? { shadowOpacity: layer.shadowOpacity } : {}),
+  };
+
   return (
     <>
       <KonvaImage
@@ -387,11 +403,7 @@ function ImageShape({ layer, isSelected, onSelect, onChange }: ShapeProps) {
         rotation={layer.rotation}
         opacity={layer.opacity}
         visible={layer.visible}
-        shadowColor={layer.shadowColor}
-        shadowBlur={layer.shadowBlur}
-        shadowOffsetX={layer.shadowOffsetX}
-        shadowOffsetY={layer.shadowOffsetY}
-        shadowOpacity={layer.shadowOpacity}
+        {...shadowProps}
         image={image}
         draggable={!layer.locked}
         onClick={onSelect}
