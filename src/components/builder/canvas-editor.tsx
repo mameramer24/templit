@@ -12,7 +12,7 @@
  *  - Auto-saves canvas JSON to parent via onCanvasChange callback
  */
 
-import React, { useCallback, useRef, useState } from "react";
+import React, { useCallback, useRef, useState, useEffect } from "react";
 import {
   Stage,
   Layer,
