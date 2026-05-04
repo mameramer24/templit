@@ -744,14 +744,32 @@ export default function CanvasEditor({
   // ── Render ────────────────────────────────────────────────────────────────
 
   return (
-    <div className="flex h-screen bg-[#0f0f1a] text-white overflow-hidden">
+    <div className="flex h-screen bg-[#050508] text-white overflow-hidden relative">
+      {/* Mobile Override Overlay */}
+      <div className="lg:hidden absolute inset-0 z-[100] bg-[#050508]/95 backdrop-blur-2xl flex flex-col items-center justify-center p-8 text-center">
+         <div className="h-20 w-20 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-3xl flex items-center justify-center mb-6 shadow-2xl shadow-indigo-500/30">
+           <Wand2 className="h-10 w-10 text-white" />
+         </div>
+         <h2 className="text-2xl font-bold mb-3 tracking-tight">Desktop Required</h2>
+         <p className="text-base text-white/60 max-w-sm leading-relaxed">
+           Templit Builder is a professional design tool. For the best layout and editing experience, please open this app on a tablet or desktop computer.
+         </p>
+      </div>
+
+      {/* Decorative Animated Background */}
+      <div className="absolute inset-0 z-0 pointer-events-none overflow-hidden">
+        <div className="absolute top-[10%] left-[20%] w-[600px] h-[600px] bg-indigo-600/10 rounded-full blur-[120px] mix-blend-screen mix-blend-lighten animate-pulse" style={{ animationDuration: '8s' }}></div>
+        <div className="absolute bottom-[10%] right-[20%] w-[800px] h-[800px] bg-purple-600/10 rounded-full blur-[150px] mix-blend-screen mix-blend-lighten animate-pulse" style={{ animationDuration: '12s' }}></div>
+      </div>
+
       {/* ── LEFT: Layer Panel ─────────────────────────────────────────── */}
-      <aside className="w-64 border-r border-white/10 bg-[#0f0f1a] flex flex-col">
-        <div className="p-3 border-b border-white/10 flex gap-2">
+      <aside className="hidden lg:flex flex-col w-72 z-10 my-4 ml-4 rounded-2xl bg-[#0d0d14]/80 backdrop-blur-2xl border border-white/5 shadow-2xl overflow-hidden shrink-0 transition-all duration-300">
+        <div className="p-2 border-b border-white/5 bg-white/5 flex gap-1 rounded-t-2xl relative">
+          <div className="absolute inset-y-2 w-[calc(50%-6px)] bg-[#2a2a3a] rounded-lg shadow-sm border border-white/5 transition-transform duration-300 ease-out z-0" style={{ transform: activeTab === 'layers' ? 'translateX(0)' : 'translateX(calc(100% + 4px))' }} />
           <Button
             size="sm"
-            variant={activeTab === "layers" ? "secondary" : "ghost"}
-            className="flex-1 text-[11px] gap-2"
+            variant="ghost"
+            className={`flex-1 text-[11px] gap-2 relative z-10 transition-colors ${activeTab === 'layers' ? 'text-white hover:bg-transparent' : 'text-white/40 hover:text-white hover:bg-transparent'}`}
             onClick={() => setActiveTab("layers")}
           >
             <Layers className="h-3.5 w-3.5" />
@@ -759,8 +777,8 @@ export default function CanvasEditor({
           </Button>
           <Button
             size="sm"
-            variant={activeTab === "assets" ? "secondary" : "ghost"}
-            className="flex-1 text-[11px] gap-2"
+            variant="ghost"
+            className={`flex-1 text-[11px] gap-2 relative z-10 transition-colors ${activeTab === 'assets' ? 'text-white hover:bg-transparent' : 'text-white/40 hover:text-white hover:bg-transparent'}`}
             onClick={() => setActiveTab("assets")}
           >
             <Library className="h-3.5 w-3.5" />
@@ -768,7 +786,7 @@ export default function CanvasEditor({
           </Button>
         </div>
 
-        <div className="flex-1 overflow-y-auto">
+        <div className="flex-1 overflow-y-auto [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-thumb]:bg-white/10 [&::-webkit-scrollbar-thumb]:rounded-full hover:[&::-webkit-scrollbar-thumb]:bg-white/20">
           {activeTab === "layers" ? (
             <div className="p-3 space-y-1">
               {layers.slice().reverse().map((l) => (
@@ -779,13 +797,13 @@ export default function CanvasEditor({
                   }`}
                   onClick={() => setSelectedId(l.id)}
                 >
-                  <div className="flex items-center gap-2 max-w-[120px]">
-                    {l.type === "text" ? <Type className="h-3.5 w-3.5" /> : l.type === "rect" ? <Square className="h-3.5 w-3.5" /> : <ImageIcon className="h-3.5 w-3.5" />}
-                    <span className="text-xs truncate font-medium">
+                  <div className="flex items-center gap-2 flex-1 min-w-0 pr-2">
+                    {l.type === "text" ? <Type className="h-3.5 w-3.5 shrink-0" /> : l.type === "rect" ? <Square className="h-3.5 w-3.5 shrink-0" /> : <ImageIcon className="h-3.5 w-3.5 shrink-0" />}
+                    <span className="text-xs truncate font-medium flex-1 min-w-0">
                       {l.type === "text" ? (l.text || "Text") : l.type}
                     </span>
                   </div>
-                  <div className="flex items-center gap-1">
+                  <div className="flex items-center gap-1 shrink-0">
                     <button 
                       onClick={(e) => { e.stopPropagation(); moveLayer("up", l.id); }} 
                       className="p-1 hover:text-white"
@@ -821,45 +839,18 @@ export default function CanvasEditor({
             <div className="p-4 space-y-6">
                <div>
                   <h4 className="text-[10px] uppercase tracking-widest text-white/30 font-bold mb-3">Placeholders</h4>
-                  <div className="grid grid-cols-2 gap-3">
-                     {PLACEHOLDERS.images.map((img) => (
-                        <div 
-                          key={img.name}
-                          onClick={() => handleAddImage(img.url)}
-                          className="group relative h-24 bg-white/5 border border-white/10 rounded-lg overflow-hidden cursor-pointer hover:border-indigo-500/50 transition-all"
-                        >
-                           {/* eslint-disable-next-line @next/next/no-img-element */}
-                           <img src={img.url} alt={img.name} className="w-full h-full object-cover opacity-50 group-hover:opacity-80 transition-opacity" />
-                           <div className="absolute inset-0 flex items-center justify-center p-2">
-                              <span className="text-[9px] font-bold text-white bg-black/60 px-1.5 py-0.5 rounded backdrop-blur-sm truncate">
-                                 {img.name}
-                              </span>
-                           </div>
-                        </div>
-                     ))}
-                  </div>
-               </div>
-               
-               <div className="pt-4 border-t border-white/5">
-                  <p className="text-[10px] text-white/20 italic">More professional assets coming soon...</p>
-               </div>
-            </div>
-          )}
-        </div>
-      </aside>
-
-      {/* ── CENTER: Toolbar + Canvas ───────────────────────────────────── */}
-      <div className="flex-1 flex flex-col overflow-hidden">
-        {/* Toolbar */}
-        <div className="h-12 bg-[#16162a] border-b border-white/10 flex items-center gap-2 px-4">
+             {/* ── CENTER: Toolbar + Canvas ───────────────────────────────────── */}
+      <div className="flex-1 flex flex-col overflow-hidden relative z-0">
+        {/* Floating Toolbar */}
+        <div className="absolute top-6 left-1/2 -translate-x-1/2 flex items-center gap-1.5 px-3 py-2 bg-[#12121a]/80 backdrop-blur-2xl border border-white/10 rounded-full shadow-[0_8px_32px_rgba(0,0,0,0.5)] z-50">
           <Button
             id="add-text-btn"
             size="sm"
             variant="ghost"
             onClick={() => addLayer(makeDefaultText())}
-            className="text-white/70 hover:text-white hover:bg-white/10"
+            className="h-8 rounded-full text-white/70 hover:text-white hover:bg-white/10 px-3"
           >
-            <Type className="h-4 w-4 mr-1" />
+            <Type className="h-3.5 w-3.5 mr-1.5" />
             Text
           </Button>
 
@@ -868,10 +859,10 @@ export default function CanvasEditor({
             size="sm"
             variant="ghost"
             onClick={() => addLayer(makeDefaultRect())}
-            className="text-white/70 hover:text-white hover:bg-white/10"
+            className="h-8 rounded-full text-white/70 hover:text-white hover:bg-white/10 px-3"
           >
-            <Square className="h-4 w-4 mr-1" />
-            Rect
+            <Square className="h-3.5 w-3.5 mr-1.5" />
+            Shape
           </Button>
 
           <Button
@@ -879,20 +870,20 @@ export default function CanvasEditor({
             size="sm"
             variant="ghost"
             onClick={() => addLayer(makePlaceholderImage())}
-            className="text-white/70 hover:text-white hover:bg-white/10"
+            className="h-8 rounded-full text-white/70 hover:text-white hover:bg-white/10 px-3"
           >
-            <ImageIcon className="h-4 w-4 mr-1" />
-            Placeholder
+            <ImageIcon className="h-3.5 w-3.5 mr-1.5" />
+            Image
           </Button>
 
           <div className="relative group overflow-hidden">
             <Button
               size="sm"
               variant="ghost"
-              className="text-indigo-400 hover:text-indigo-300 hover:bg-indigo-500/10 border border-indigo-500/20"
+              className="h-8 rounded-full text-indigo-400 hover:text-indigo-300 hover:bg-indigo-500/10 border border-indigo-500/20 px-3 ml-1"
             >
-              <Plus className="h-4 w-4 mr-1" />
-              Upload Image
+              <Plus className="h-3.5 w-3.5 mr-1.5" />
+              Upload
             </Button>
             <input 
               type="file" 
@@ -903,78 +894,68 @@ export default function CanvasEditor({
             />
           </div>
 
-          <Separator orientation="vertical" className="h-6 bg-white/10" />
+          <Separator orientation="vertical" className="h-5 mx-1 bg-white/10" />
 
           <Button
             id="undo-btn"
-            size="sm"
+            size="icon"
             variant="ghost"
             onClick={undo}
             disabled={historyIdx === 0}
-            className="text-white/70 hover:text-white hover:bg-white/10 disabled:opacity-30"
+            className="h-8 w-8 rounded-full text-white/70 hover:text-white hover:bg-white/10 disabled:opacity-30"
           >
             <Undo2 className="h-4 w-4" />
           </Button>
 
           <Button
             id="redo-btn"
-            size="sm"
+            size="icon"
             variant="ghost"
             onClick={redo}
             disabled={historyIdx >= history.length - 1}
-            className="text-white/70 hover:text-white hover:bg-white/10 disabled:opacity-30"
+            className="h-8 w-8 rounded-full text-white/70 hover:text-white hover:bg-white/10 disabled:opacity-30"
           >
             <Redo2 className="h-4 w-4" />
           </Button>
 
-          <Separator orientation="vertical" className="h-6 bg-white/10" />
+          <Separator orientation="vertical" className="h-5 mx-1 bg-white/10" />
 
-          <div className="flex items-center gap-1 bg-white/5 rounded-lg p-0.5">
+          <div className="flex items-center gap-0.5 bg-white/5 rounded-full px-1 py-0.5">
             <Button 
               variant="ghost" 
               size="icon" 
-              className="h-7 w-7 text-white/50 hover:text-white hover:bg-white/10" 
+              className="h-7 w-7 rounded-full text-white/50 hover:text-white hover:bg-white/10" 
               onClick={() => setScale(s => Math.max(0.1, s - 0.1))}
             >
               <ZoomOut className="h-3.5 w-3.5" />
             </Button>
-            <div className="px-2 text-[10px] font-mono text-white/40 min-w-[40px] text-center">
+            <div className="px-1 text-[10px] font-mono text-white/50 min-w-[36px] text-center">
               {Math.round(scale * 100)}%
             </div>
             <Button 
               variant="ghost" 
               size="icon" 
-              className="h-7 w-7 text-white/50 hover:text-white hover:bg-white/10" 
-              onClick={() => setScale(s => Math.min(3, s + 0.1))}
+              className="h-7 w-7 rounded-full text-white/50 hover:text-white hover:bg-white/10" 
+              onClick={() => setScale(s => Math.max(3, s + 0.1))}
             >
               <ZoomIn className="h-3.5 w-3.5" />
             </Button>
-            <Button 
-              variant="ghost" 
-              size="icon" 
-              className="h-7 w-7 text-white/50 hover:text-white hover:bg-white/10" 
-              onClick={() => {
-                setScale(1);
-                setStagePos({ x: 0, y: 0 });
-              }}
-              title="Reset Zoom"
-            >
-              <Maximize className="h-3.5 w-3.5" />
-            </Button>
           </div>
+        </div>
 
-          <div className="ml-auto flex items-center gap-2">
+        {/* Floating Actions (Save, Export, Actions) */}
+        <div className="absolute top-6 right-6 flex items-center gap-2 z-50">
             {selectedId && (
-              <>
+              <div className="flex bg-[#12121a]/80 backdrop-blur-2xl border border-white/10 rounded-full shadow-lg p-1 mr-2">
                 <Button
                   id="duplicate-layer-btn"
                   size="sm"
                   variant="ghost"
                   onClick={() => duplicateLayer()}
-                  className="text-indigo-400 hover:text-indigo-300 hover:bg-indigo-500/10"
+                  className="h-8 rounded-full text-indigo-400 hover:text-indigo-300 hover:bg-indigo-500/10 px-3"
                   title="Duplicate Layer (Cmd+D)"
                 >
-                  <Copy className="h-4 w-4 mr-1" />
+                  <Copy className="h-3.5 w-3.5 mr-1.5" />
                   Duplicate
                 </Button>
                 <Button
@@ -982,53 +963,54 @@ export default function CanvasEditor({
                   size="sm"
                   variant="ghost"
                   onClick={deleteSelected}
-                  className="text-red-400 hover:text-red-300 hover:bg-red-500/10"
+                  className="h-8 rounded-full text-red-400 hover:text-red-300 hover:bg-red-500/10 px-3"
                   title="Delete Layer (Del)"
                 >
-                  <Trash2 className="h-4 w-4 mr-1" />
+                  <Trash2 className="h-3.5 w-3.5 mr-1.5" />
                   Delete
                 </Button>
-              </>
+              </div>
             )}
 
-            <Button
-              size="sm"
-              variant="outline"
-              onClick={handleSave}
-              disabled={isSaving}
-              className="border-white/10 text-white hover:bg-white/5"
-            >
-              {isSaving ? (
-                <Loader2 className="h-4 w-4 animate-spin mr-1" />
-              ) : (
-                <Wand2 className="h-4 w-4 mr-1" />
-              )}
-              Save
-            </Button>
-
-            {template.type === "video" ? (
-               <Mp4Renderer 
-                 templateName={template.name}
-                 stageRef={stageRef}
-                 config={{
-                   totalFrames: 100,
-                   fps: 30,
-                   width: canvas.width,
-                   height: canvas.height,
-                 }}
-               />
-            ) : (
+            <div className="flex bg-[#12121a]/80 backdrop-blur-2xl border border-white/10 rounded-full shadow-lg p-1 gap-1">
               <Button
-                id="export-png-btn"
                 size="sm"
-                onClick={exportPng}
-                className="bg-indigo-600 hover:bg-indigo-500 text-white"
+                variant="outline"
+                onClick={handleSave}
+                disabled={isSaving}
+                className="h-8 rounded-full border-transparent bg-transparent text-white hover:bg-white/10 px-4"
               >
-                <Download className="h-4 w-4 mr-1" />
-                Export PNG
+                {isSaving ? (
+                  <Loader2 className="h-3.5 w-3.5 animate-spin mr-1.5" />
+                ) : (
+                  <Wand2 className="h-3.5 w-3.5 mr-1.5" />
+                )}
+                Save
               </Button>
-            )}
-          </div>
+
+              {template.type === "video" ? (
+                 <Mp4Renderer 
+                   templateName={template.name}
+                   stageRef={stageRef}
+                   config={{
+                     totalFrames: 100,
+                     fps: 30,
+                     width: canvas.width,
+                     height: canvas.height,
+                   }}
+                 />
+              ) : (
+                <Button
+                  id="export-png-btn"
+                  size="sm"
+                  onClick={exportPng}
+                  className="h-8 rounded-full bg-indigo-600 hover:bg-indigo-500 text-white shadow-md shadow-indigo-500/20 px-4"
+                >
+                  <Download className="h-3.5 w-3.5 mr-1.5" />
+                  Export
+                </Button>
+              )}
+            </div>
         </div>
 
         {/* Stage container */}
@@ -1092,14 +1074,14 @@ export default function CanvasEditor({
       </div>
 
       {/* ── RIGHT: Properties Panel ────────────────────────────────────── */}
-      <aside className="w-64 flex-shrink-0 bg-[#16162a] border-l border-white/10 flex flex-col overflow-y-auto">
-        <div className="p-3 border-b border-white/10">
-          <span className="text-sm font-semibold text-white/80">
+      <aside className="hidden lg:flex flex-col w-72 flex-shrink-0 z-10 my-4 mr-4 rounded-2xl bg-[#0d0d14]/80 backdrop-blur-2xl border border-white/5 shadow-2xl overflow-y-auto [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-thumb]:bg-white/10 [&::-webkit-scrollbar-thumb]:rounded-full hover:[&::-webkit-scrollbar-thumb]:bg-white/20 transition-all duration-300">
+        <div className="p-4 border-b border-white/5 bg-white/5 backdrop-blur-md sticky top-0 z-20">
+          <span className="text-xs font-bold tracking-widest text-white/90 uppercase">
             {selectedLayer ? "Properties" : "Canvas"}
           </span>
         </div>
 
-        <div className="p-3 space-y-4 pb-32">
+        <div className="p-4 space-y-6 pb-32">
           {!selectedLayer ? (
             /* Canvas properties */
             <>
