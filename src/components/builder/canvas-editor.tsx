@@ -605,10 +605,11 @@ export default function CanvasEditor({
     const newLayer: CanvasLayer = {
       ...targetLayer,
       id: generateId(),
-      name: newName,
+      ...(newName ? { name: newName } : {}),
       x: (targetLayer.x ?? 0) + 10,
       y: (targetLayer.y ?? 0) + 10,
     };
+    if (!newName) delete newLayer.name;
 
     updateLayers([...layers, newLayer]);
     setSelectedId(newLayer.id);
