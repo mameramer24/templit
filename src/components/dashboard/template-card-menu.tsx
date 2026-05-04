@@ -38,14 +38,10 @@ export function TemplateCardMenu({ templateId }: TemplateCardMenuProps) {
 
   return (
     <DropdownMenu>
-      <DropdownMenuTrigger asChild>
-        <Button
-          variant="ghost"
-          size="icon"
-          className="h-7 w-7 text-white/50 hover:text-white hover:bg-white/10"
-        >
-          <MoreHorizontal className="h-4 w-4" />
-        </Button>
+      <DropdownMenuTrigger
+        className="h-7 w-7 inline-flex items-center justify-center rounded-md text-white/50 hover:text-white hover:bg-white/10 outline-none"
+      >
+        <MoreHorizontal className="h-4 w-4" />
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="w-40 bg-[#1e1e2e] border-white/10 text-white">
         <DropdownMenuItem 
