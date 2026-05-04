@@ -868,8 +868,32 @@ export default function CanvasEditor({
 
       {/* ── CENTER: Toolbar + Canvas ───────────────────────────────────── */}
       <div className="flex-1 flex flex-col overflow-hidden relative z-0">
-        {/* Floating Toolbar */}
-        <div className="absolute top-6 left-1/2 -translate-x-1/2 flex items-center gap-1.5 px-3 py-2 bg-[#12121a]/80 backdrop-blur-2xl border border-white/10 rounded-full shadow-[0_8px_32px_rgba(0,0,0,0.5)] z-50">
+        {/* Top Left: Undo / Redo */}
+        <div className="absolute top-6 left-6 flex items-center gap-1 bg-[#12121a]/80 backdrop-blur-2xl border border-white/10 rounded-full shadow-lg p-1 z-50">
+          <Button
+            id="undo-btn"
+            size="icon"
+            variant="ghost"
+            onClick={undo}
+            disabled={historyIdx === 0}
+            className="h-8 w-8 rounded-full text-white/70 hover:text-white hover:bg-white/10 disabled:opacity-30"
+          >
+            <Undo2 className="h-4 w-4" />
+          </Button>
+          <Button
+            id="redo-btn"
+            size="icon"
+            variant="ghost"
+            onClick={redo}
+            disabled={historyIdx >= history.length - 1}
+            className="h-8 w-8 rounded-full text-white/70 hover:text-white hover:bg-white/10 disabled:opacity-30"
+          >
+            <Redo2 className="h-4 w-4" />
+          </Button>
+        </div>
+
+        {/* Floating Toolbar (Creation Tools) */}
+        <div className="absolute top-6 left-1/2 -translate-x-1/2 flex items-center gap-1.5 px-3 py-2 bg-[#12121a]/80 backdrop-blur-2xl border border-white/10 rounded-full shadow-[0_8px_32px_rgba(0,0,0,0.5)] z-50 transition-all">
           <Button
             id="add-text-btn"
             size="sm"
@@ -920,81 +944,31 @@ export default function CanvasEditor({
               title="Upload from computer"
             />
           </div>
-
-          <Separator orientation="vertical" className="h-5 mx-1 bg-white/10" />
-
-          <Button
-            id="undo-btn"
-            size="icon"
-            variant="ghost"
-            onClick={undo}
-            disabled={historyIdx === 0}
-            className="h-8 w-8 rounded-full text-white/70 hover:text-white hover:bg-white/10 disabled:opacity-30"
-          >
-            <Undo2 className="h-4 w-4" />
-          </Button>
-
-          <Button
-            id="redo-btn"
-            size="icon"
-            variant="ghost"
-            onClick={redo}
-            disabled={historyIdx >= history.length - 1}
-            className="h-8 w-8 rounded-full text-white/70 hover:text-white hover:bg-white/10 disabled:opacity-30"
-          >
-            <Redo2 className="h-4 w-4" />
-          </Button>
-
-          <Separator orientation="vertical" className="h-5 mx-1 bg-white/10" />
-
-          <div className="flex items-center gap-0.5 bg-white/5 rounded-full px-1 py-0.5">
-            <Button 
-              variant="ghost" 
-              size="icon" 
-              className="h-7 w-7 rounded-full text-white/50 hover:text-white hover:bg-white/10" 
-              onClick={() => setScale(s => Math.max(0.1, s - 0.1))}
-            >
-              <ZoomOut className="h-3.5 w-3.5" />
-            </Button>
-            <div className="px-1 text-[10px] font-mono text-white/50 min-w-[36px] text-center">
-              {Math.round(scale * 100)}%
-            </div>
-            <Button 
-              variant="ghost" 
-              size="icon" 
-              className="h-7 w-7 rounded-full text-white/50 hover:text-white hover:bg-white/10" 
-              onClick={() => setScale(s => Math.max(3, s + 0.1))}
-            >
-              <ZoomIn className="h-3.5 w-3.5" />
-            </Button>
-          </div>
         </div>
 
-        {/* Floating Actions (Save, Export, Actions) */}
+        {/* Floating Actions (Save, Export, Layers) */}
         <div className="absolute top-6 right-6 flex items-center gap-2 z-50">
             {selectedId && (
-              <div className="flex bg-[#12121a]/80 backdrop-blur-2xl border border-white/10 rounded-full shadow-lg p-1 mr-2">
+              <div className="flex bg-[#12121a]/80 backdrop-blur-2xl border border-white/10 rounded-full shadow-lg p-1 mr-2 transition-all">
                 <Button
                   id="duplicate-layer-btn"
-                  size="sm"
+                  size="icon"
                   variant="ghost"
                   onClick={() => duplicateLayer()}
-                  className="h-8 rounded-full text-indigo-400 hover:text-indigo-300 hover:bg-indigo-500/10 px-3"
+                  className="h-8 w-8 rounded-full text-indigo-400 hover:text-indigo-300 hover:bg-indigo-500/10"
                   title="Duplicate Layer (Cmd+D)"
                 >
-                  <Copy className="h-3.5 w-3.5 mr-1.5" />
-                  Duplicate
+                  <Copy className="h-3.5 w-3.5" />
                 </Button>
                 <Button
                   id="delete-layer-btn"
-                  size="sm"
+                  size="icon"
                   variant="ghost"
                   onClick={deleteSelected}
-                  className="h-8 rounded-full text-red-400 hover:text-red-300 hover:bg-red-500/10 px-3"
+                  className="h-8 w-8 rounded-full text-red-400 hover:text-red-300 hover:bg-red-500/10"
                   title="Delete Layer (Del)"
                 >
-                  <Trash2 className="h-3.5 w-3.5 mr-1.5" />
-                  Delete
+                  <Trash2 className="h-3.5 w-3.5" />
                 </Button>
               </div>
             )}
@@ -1038,6 +1012,29 @@ export default function CanvasEditor({
                 </Button>
               )}
             </div>
+        </div>
+
+        {/* Bottom Right: Zoom Controls */}
+        <div className="absolute bottom-6 right-6 flex items-center gap-0.5 bg-[#12121a]/80 backdrop-blur-2xl border border-white/10 rounded-full shadow-lg p-1 z-50">
+          <Button 
+            variant="ghost" 
+            size="icon" 
+            className="h-7 w-7 rounded-full text-white/50 hover:text-white hover:bg-white/10" 
+            onClick={() => setScale(s => Math.max(0.1, s - 0.1))}
+          >
+            <ZoomOut className="h-3.5 w-3.5" />
+          </Button>
+          <div className="px-1 text-[10px] font-mono text-white/50 min-w-[36px] text-center">
+            {Math.round(scale * 100)}%
+          </div>
+          <Button 
+            variant="ghost" 
+            size="icon" 
+            className="h-7 w-7 rounded-full text-white/50 hover:text-white hover:bg-white/10" 
+            onClick={() => setScale(s => Math.max(3, s + 0.1))}
+          >
+            <ZoomIn className="h-3.5 w-3.5" />
+          </Button>
         </div>
 
         {/* Stage container */}
