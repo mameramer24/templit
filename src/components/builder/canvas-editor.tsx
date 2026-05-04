@@ -56,6 +56,7 @@ import {
   Library,
   ChevronUp,
   ChevronDown,
+  Copy,
 } from "lucide-react";
 import type { Template } from "@/lib/db/schema";
 import { saveTemplateLayersAction } from "@/app/actions/template-actions";
@@ -585,6 +586,58 @@ export default function CanvasEditor({
     setSelectedId(null);
   }, [selectedId, layers, updateLayers]);
 
+  const duplicateLayer = useCallback((layerId?: string) => {
+    const idToDuplicate = layerId || selectedId;
+    if (!idToDuplicate) return;
+    const targetLayer = layers.find(l => l.id === idToDuplicate);
+    if (!targetLayer) return;
+
+    // generate new name
+    const newName = targetLayer.name 
+      ? (targetLayer.name.includes(" Copy") 
+          ? targetLayer.name.replace(/( Copy \d+| Copy)/, (match) => {
+              const num = parseInt(match.replace(" Copy ", "")) || 1;
+              return ` Copy ${num + 1}`;
+            })
+          : `${targetLayer.name} Copy`)
+      : undefined;
+
+    const newLayer: CanvasLayer = {
+      ...targetLayer,
+      id: generateId(),
+      name: newName,
+      x: (targetLayer.x ?? 0) + 10,
+      y: (targetLayer.y ?? 0) + 10,
+    };
+
+    updateLayers([...layers, newLayer]);
+    setSelectedId(newLayer.id);
+    toast.success("Layer duplicated successfully!");
+  }, [layers, selectedId, updateLayers]);
+
+  // Handle Keyboard Shortcuts
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // Ignore if actively typing in inputs
+      if (
+        e.target instanceof HTMLInputElement ||
+        e.target instanceof HTMLTextAreaElement ||
+        e.target instanceof HTMLSelectElement
+      ) {
+        return;
+      }
+      
+      if ((e.ctrlKey || e.metaKey) && e.key === "d") {
+        e.preventDefault();
+        duplicateLayer();
+      } else if (e.key === "Delete" || e.key === "Backspace") {
+        deleteSelected();
+      }
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [duplicateLayer, deleteSelected]);
+
   const handleLocalImageUpload = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -749,10 +802,13 @@ export default function CanvasEditor({
                     <button onClick={(e) => { e.stopPropagation(); updateLayer(l.id, { visible: !l.visible }); }} className="p-1 hover:text-white">
                       {l.visible ? <Eye className="h-3.5 w-3.5" /> : <EyeOff className="h-3.5 w-3.5" />}
                     </button>
-                    <button onClick={(e) => { e.stopPropagation(); updateLayer(l.id, { locked: !l.locked }); }} className="p-1 hover:text-white">
+                    <button onClick={(e) => { e.stopPropagation(); updateLayer(l.id, { locked: !l.locked }); }} className="p-1 hover:text-white" title={l.locked ? "Unlock layer" : "Lock layer"}>
                       {l.locked ? <Lock className="h-3.5 w-3.5 text-amber-500" /> : <Unlock className="h-3.5 w-3.5" />}
                     </button>
-                    <button onClick={(e) => { e.stopPropagation(); setLayers(layers.filter(x => x.id !== l.id)); }} className="p-1 hover:text-red-400 opacity-0 group-hover:opacity-100">
+                    <button onClick={(e) => { e.stopPropagation(); duplicateLayer(l.id); }} className="p-1 hover:text-white" title="Duplicate layer">
+                      <Copy className="h-3.5 w-3.5" />
+                    </button>
+                    <button onClick={(e) => { e.stopPropagation(); setLayers(layers.filter(x => x.id !== l.id)); }} className="p-1 hover:text-red-400 opacity-0 group-hover:opacity-100" title="Delete layer">
                       <Trash2 className="h-3.5 w-3.5" />
                     </button>
                   </div>
@@ -908,16 +964,30 @@ export default function CanvasEditor({
 
           <div className="ml-auto flex items-center gap-2">
             {selectedId && (
-              <Button
-                id="delete-layer-btn"
-                size="sm"
-                variant="ghost"
-                onClick={deleteSelected}
-                className="text-red-400 hover:text-red-300 hover:bg-red-500/10"
-              >
-                <Trash2 className="h-4 w-4 mr-1" />
-                Delete
-              </Button>
+              <>
+                <Button
+                  id="duplicate-layer-btn"
+                  size="sm"
+                  variant="ghost"
+                  onClick={() => duplicateLayer()}
+                  className="text-indigo-400 hover:text-indigo-300 hover:bg-indigo-500/10"
+                  title="Duplicate Layer (Cmd+D)"
+                >
+                  <Copy className="h-4 w-4 mr-1" />
+                  Duplicate
+                </Button>
+                <Button
+                  id="delete-layer-btn"
+                  size="sm"
+                  variant="ghost"
+                  onClick={deleteSelected}
+                  className="text-red-400 hover:text-red-300 hover:bg-red-500/10"
+                  title="Delete Layer (Del)"
+                >
+                  <Trash2 className="h-4 w-4 mr-1" />
+                  Delete
+                </Button>
+              </>
             )}
 
             <Button

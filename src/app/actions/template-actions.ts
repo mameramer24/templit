@@ -78,3 +78,52 @@ export async function saveTemplateLayersAction(
   revalidatePath(`/templates/${templateId}/builder`);
   return { success: true };
 }
+
+/**
+ * duplicateTemplateAction
+ * 
+ * Duplicates an existing template and its layers.
+ */
+export async function duplicateTemplateAction(templateId: string) {
+  const session = await auth();
+  if (!session?.user?.id) throw new Error("Unauthorized");
+
+  // Get original template
+  const [original] = await db
+    .select()
+    .from(templates)
+    .where(eq(templates.id, templateId))
+    .limit(1);
+
+  if (!original) throw new Error("Template not found");
+
+  // Verify ownership via org membership
+  const [membership] = await db
+    .select({ orgId: orgMembers.orgId })
+    .from(orgMembers)
+    .where(and(
+      eq(orgMembers.userId, session.user.id),
+      eq(orgMembers.orgId, original.orgId)
+    ))
+    .limit(1);
+
+  if (!membership) throw new Error("Unauthorized to access this template's organization");
+
+  // Create new template record
+  const newName = `${original.name} Copy`;
+  
+  const [newTemplate] = await tx_or_db(db).insert(templates).values({
+    name: newName,
+    type: original.type,
+    orgId: original.orgId,
+    createdBy: session.user.id,
+    status: "draft", // Copies usually start as drafts
+    canvas: original.canvas,
+    layers: original.layers,
+  }).returning();
+
+  if (!newTemplate) throw new Error("Failed to duplicate template");
+
+  revalidatePath("/templates");
+  return { id: newTemplate.id, success: true };
+}

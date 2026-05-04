@@ -29,6 +29,7 @@ import {
   Fingerprint,
 } from "lucide-react";
 import { CopyIdButton } from "@/components/ui/copy-id-button";
+import { TemplateCardMenu } from "@/components/dashboard/template-card-menu";
 
 export const metadata: Metadata = {
   title: "Templates — Templit",
@@ -112,6 +113,7 @@ function TemplateCard({ template }: { template: Template }) {
           <div className="flex items-center gap-1">
             <span className="text-[9px] font-mono text-white/20">ID: {template.id.slice(0, 8)}...</span>
             <CopyIdButton id={template.id} label="Template ID" />
+            <TemplateCardMenu templateId={template.id} />
           </div>
         </div>
         {canvas?.width && canvas?.height && (
