@@ -839,7 +839,34 @@ export default function CanvasEditor({
             <div className="p-4 space-y-6">
                <div>
                   <h4 className="text-[10px] uppercase tracking-widest text-white/30 font-bold mb-3">Placeholders</h4>
-             {/* ── CENTER: Toolbar + Canvas ───────────────────────────────────── */}
+                  <div className="grid grid-cols-2 gap-3">
+                     {PLACEHOLDERS.images.map((img) => (
+                        <div 
+                          key={img.name}
+                          onClick={() => handleAddImage(img.url)}
+                          className="group relative h-24 bg-white/5 border border-white/10 rounded-lg overflow-hidden cursor-pointer hover:border-indigo-500/50 transition-all"
+                        >
+                           {/* eslint-disable-next-line @next/next/no-img-element */}
+                           <img src={img.url} alt={img.name} className="w-full h-full object-cover opacity-50 group-hover:opacity-80 transition-opacity" />
+                           <div className="absolute inset-0 flex items-center justify-center p-2">
+                              <span className="text-[9px] font-bold text-white bg-black/60 px-1.5 py-0.5 rounded backdrop-blur-sm truncate">
+                                 {img.name}
+                              </span>
+                           </div>
+                        </div>
+                     ))}
+                  </div>
+               </div>
+               
+               <div className="pt-4 border-t border-white/5">
+                  <p className="text-[10px] text-white/20 italic">More professional assets coming soon...</p>
+               </div>
+            </div>
+          )}
+        </div>
+      </aside>
+
+      {/* ── CENTER: Toolbar + Canvas ───────────────────────────────────── */}
       <div className="flex-1 flex flex-col overflow-hidden relative z-0">
         {/* Floating Toolbar */}
         <div className="absolute top-6 left-1/2 -translate-x-1/2 flex items-center gap-1.5 px-3 py-2 bg-[#12121a]/80 backdrop-blur-2xl border border-white/10 rounded-full shadow-[0_8px_32px_rgba(0,0,0,0.5)] z-50">
