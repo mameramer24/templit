@@ -1035,6 +1035,18 @@ export default function CanvasEditor({
           >
             <ZoomIn className="h-3.5 w-3.5" />
           </Button>
+          <Button 
+            variant="ghost" 
+            size="icon" 
+            className="h-7 w-7 rounded-full text-white/50 hover:text-white hover:bg-white/10" 
+            onClick={() => {
+              setScale(1);
+              setStagePos({ x: 0, y: 0 });
+            }}
+            title="Reset Zoom & Position"
+          >
+            <Maximize className="h-3.5 w-3.5" />
+          </Button>
         </div>
 
         {/* Stage container */}
