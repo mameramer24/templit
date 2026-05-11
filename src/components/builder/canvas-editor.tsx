@@ -1052,19 +1052,18 @@ export default function CanvasEditor({
         {/* Zoom controls placeholder (moved to root level below) */}
 
         {/* Stage container */}
-        <div className="flex-1 overflow-hidden bg-[#0c0c1a] flex items-center justify-center" style={{ minHeight: 0 }}>
-          <div className="relative shadow-2xl shadow-black/50">
+        <div className="flex-1 overflow-auto bg-[#0c0c1a] flex items-center justify-center" style={{ minHeight: 0 }}>
+          <div
+            className="relative shadow-2xl shadow-black/50 origin-center transition-transform duration-100"
+            style={{ transform: `scale(${scale}) translate(${stagePos.x}px, ${stagePos.y}px)` }}
+          >
             <Stage
               id="konva-stage"
               ref={stageRef}
-              width={800} // Visible container width
-              height={600} // Visible container height
-              scaleX={scale}
-              scaleY={scale}
-              x={stagePos.x}
-              y={stagePos.y}
+              width={canvas.width}
+              height={canvas.height}
               draggable={false}
-              style={{ cursor: "default" }}
+              style={{ cursor: "default", display: "block" }}
               onMouseDown={(e) => {
                 // Deselect when clicking on empty stage area
                 if (e.target === e.target.getStage()) {
