@@ -197,12 +197,16 @@ function TextShape({ layer, isSelected, onSelect, onChange }: ShapeProps) {
     }
   }, [isSelected]);
 
+  // Parse fontFamily stored as "FamilyName:weight, fallback"
   let family = layer.fontFamily ?? "sans-serif";
   let style = "normal";
   if (family.includes(":")) {
-    const parts = family.split(":");
-    family = parts[0] || family;
-    if (parts[1] === "700") style = "bold";
+    const colonIdx = family.indexOf(":");
+    const weightPart = family.slice(colonIdx + 1).trim();
+    family = family.slice(0, colonIdx).trim();
+    if (weightPart.startsWith("700") || weightPart.startsWith("800") || weightPart.startsWith("900")) {
+      style = "bold";
+    }
   }
 
   const shadowProps = {
@@ -233,6 +237,7 @@ function TextShape({ layer, isSelected, onSelect, onChange }: ShapeProps) {
         {...shadowProps}
         lineHeight={layer.lineHeight ?? 1}
         letterSpacing={layer.letterSpacing ?? 0}
+        wrap="word"
         align={layer.align ?? "left"}
         draggable={!layer.locked}
         onClick={onSelect}
@@ -468,6 +473,24 @@ export default function CanvasEditor({
   const [scale, setScale] = useState(1);
   const [stagePos, setStagePos] = useState({ x: 0, y: 0 });
   const [activeTab, setActiveTab] = useState<"layers" | "assets">("layers");
+  const [fontsReady, setFontsReady] = useState(false);
+
+  // Ensure Google Fonts are loaded before canvas renders
+  useEffect(() => {
+    const ARABIC_FONTS = [
+      "400 16px Cairo",
+      "700 16px Cairo",
+      "400 16px Tajawal",
+      "700 16px Tajawal",
+      "400 16px Inter",
+      "700 16px Inter",
+    ];
+    Promise.all(ARABIC_FONTS.map(f => document.fonts.load(f)))
+      .then(() => setFontsReady(true))
+      .catch(() => setFontsReady(true)); // still render even if some fail
+    // Also trigger re-render once ALL fonts settle
+    document.fonts.ready.then(() => setFontsReady(true));
+  }, []);
   
   const [canvas, setCanvas] = useState<CanvasConfig>(() => ({
     width: (template?.canvas as CanvasConfig | null | undefined)?.width ?? 1200,
@@ -1059,6 +1082,7 @@ export default function CanvasEditor({
           >
             <Stage
               id="konva-stage"
+              key={`stage-${fontsReady}`}
               ref={stageRef}
               width={canvas.width}
               height={canvas.height}
