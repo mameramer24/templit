@@ -1014,40 +1014,7 @@ export default function CanvasEditor({
             </div>
         </div>
 
-        {/* Bottom Right: Zoom Controls */}
-        <div className="absolute bottom-6 right-6 flex items-center gap-0.5 bg-[#12121a]/80 backdrop-blur-2xl border border-white/10 rounded-full shadow-lg p-1 z-50">
-          <Button 
-            variant="ghost" 
-            size="icon" 
-            className="h-7 w-7 rounded-full text-white/50 hover:text-white hover:bg-white/10" 
-            onClick={() => setScale(s => Math.max(0.1, s - 0.1))}
-          >
-            <ZoomOut className="h-3.5 w-3.5" />
-          </Button>
-          <div className="px-1 text-[10px] font-mono text-white/50 min-w-[36px] text-center">
-            {Math.round(scale * 100)}%
-          </div>
-          <Button 
-            variant="ghost" 
-            size="icon" 
-            className="h-7 w-7 rounded-full text-white/50 hover:text-white hover:bg-white/10" 
-            onClick={() => setScale(s => Math.max(3, s + 0.1))}
-          >
-            <ZoomIn className="h-3.5 w-3.5" />
-          </Button>
-          <Button 
-            variant="ghost" 
-            size="icon" 
-            className="h-7 w-7 rounded-full text-white/50 hover:text-white hover:bg-white/10" 
-            onClick={() => {
-              setScale(1);
-              setStagePos({ x: 0, y: 0 });
-            }}
-            title="Reset Zoom & Position"
-          >
-            <Maximize className="h-3.5 w-3.5" />
-          </Button>
-        </div>
+        {/* Zoom controls placeholder (moved to root level below) */}
 
         {/* Stage container */}
         <div className="flex-1 overflow-hidden bg-[#0c0c1a] flex items-center justify-center">
@@ -1107,6 +1074,43 @@ export default function CanvasEditor({
             </Badge>
           </div>
         </div>
+      </div>
+
+      {/* ── ZOOM Controls (absolute to root flex container) ──────────── */}
+      <div className="absolute bottom-6 left-1/2 -translate-x-1/2 flex items-center gap-0.5 bg-[#12121a]/80 backdrop-blur-2xl border border-white/10 rounded-full shadow-lg p-1 z-50">
+        <Button 
+          variant="ghost" 
+          size="icon" 
+          className="h-7 w-7 rounded-full text-white/50 hover:text-white hover:bg-white/10" 
+          onClick={() => setScale(s => Math.max(0.1, +(s - 0.1).toFixed(1)))}
+          title="Zoom Out"
+        >
+          <ZoomOut className="h-3.5 w-3.5" />
+        </Button>
+        <div className="px-2 text-[10px] font-mono text-white/50 min-w-[40px] text-center select-none">
+          {Math.round(scale * 100)}%
+        </div>
+        <Button 
+          variant="ghost" 
+          size="icon" 
+          className="h-7 w-7 rounded-full text-white/50 hover:text-white hover:bg-white/10" 
+          onClick={() => setScale(s => Math.min(3, +(s + 0.1).toFixed(1)))}
+          title="Zoom In"
+        >
+          <ZoomIn className="h-3.5 w-3.5" />
+        </Button>
+        <Button 
+          variant="ghost" 
+          size="icon" 
+          className="h-7 w-7 rounded-full text-white/50 hover:text-white hover:bg-white/10" 
+          onClick={() => {
+            setScale(1);
+            setStagePos({ x: 0, y: 0 });
+          }}
+          title="Reset Zoom & Position"
+        >
+          <Maximize className="h-3.5 w-3.5" />
+        </Button>
       </div>
 
       {/* ── RIGHT: Properties Panel ────────────────────────────────────── */}
