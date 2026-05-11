@@ -242,7 +242,7 @@ async function getEmbeddedFontFace(family: string, weight: string): Promise<stri
             reader.readAsDataURL(fontBlob);
           });
           base64Map.set(fontUrl, base64);
-        } catch { /* skip failed font files */ }
+        } catch (_e) { /* skip failed font files */ }
       })
     );
 
@@ -257,7 +257,7 @@ async function getEmbeddedFontFace(family: string, weight: string): Promise<stri
 
     fontFaceCache.set(key, embeddedCSS);
     return embeddedCSS;
-  } catch {
+  } catch (_e) {
     return "";
   }
 }
