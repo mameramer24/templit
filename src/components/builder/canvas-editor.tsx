@@ -206,68 +206,134 @@ function parseFontFamily(raw?: string): { family: string; style: string } {
   return { family, style };
 }
 
-/** Renders Arabic text on an offscreen HTML canvas with direction:rtl for full kashida + shaping support */
+/**
+ * Cache for base64-encoded @font-face declarations.
+ * Key: "family:weight" → CSS @font-face string with data URL
+ */
+const fontFaceCache = new Map<string, string>();
+
+async function getEmbeddedFontFace(family: string, weight: string): Promise<string> {
+  const key = `${family}:${weight}`;
+  if (fontFaceCache.has(key)) return fontFaceCache.get(key)!;
+
+  try {
+    // 1. Fetch Google Fonts CSS (browser UA → woff2)
+    const cssUrl = `https://fonts.googleapis.com/css2?family=${family.replace(/ /g, "+")}:wght@${weight}&display=swap`;
+    const cssResp = await fetch(cssUrl);
+    const css = await cssResp.text();
+
+    // 2. Extract the first font-file URL from the CSS
+    const urlMatch = css.match(/url\(([^)]+)\)/);
+    if (!urlMatch?.[1]) return "";
+    const fontUrl = urlMatch[1].replace(/['"]/g, "");
+
+    // 3. Fetch font binary and convert to base64 data-url
+    const fontResp = await fetch(fontUrl);
+    const fontBlob = await fontResp.blob();
+    const base64: string = await new Promise((resolve) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(reader.result as string);
+      reader.readAsDataURL(fontBlob);
+    });
+
+    // 4. Build @font-face with embedded data URL
+    const fontFace = `@font-face { font-family: '${family}'; font-weight: ${weight}; src: url(${base64}) format('woff2'); }`;
+    fontFaceCache.set(key, fontFace);
+    return fontFace;
+  } catch {
+    return "";
+  }
+}
+
+/**
+ * Renders Arabic text via SVG foreignObject → Image with **embedded** Google Font.
+ * Uses the browser's CSS text engine for proper Arabic shaping, kashida, and ligatures.
+ */
 function useArabicTextImage(layer: CanvasLayer) {
   const [img, setImg] = useState<HTMLImageElement | null>(null);
 
   useEffect(() => {
     if (!isArabicFont(layer.fontFamily)) { setImg(null); return; }
 
-    const { family, style } = parseFontFamily(layer.fontFamily);
-    const DPR = 2;
-    const w = Math.max(1, Math.ceil(layer.width));
-    const h = Math.max(1, Math.ceil(layer.height));
+    let cancelled = false;
 
-    const offscreen = document.createElement("canvas");
-    offscreen.width = w * DPR;
-    offscreen.height = h * DPR;
-    const ctx = offscreen.getContext("2d")!;
-    ctx.scale(DPR, DPR);
-    ctx.direction = "rtl";
-    ctx.textBaseline = "top";
+    (async () => {
+      const { family, style } = parseFontFamily(layer.fontFamily);
+      const fontWeight = style === "bold" ? "700" : "400";
 
-    const fontSize = layer.fontSize ?? 24;
-    const fontWeight = style === "bold" ? "700" : "400";
-    ctx.font = `${fontWeight} ${fontSize}px "${family}", sans-serif`;
-    ctx.fillStyle = layer.fill ?? "#000000";
+      // Get embedded @font-face CSS
+      const fontFaceCSS = await getEmbeddedFontFace(family, fontWeight);
+      if (cancelled) return;
 
-    if ((layer.shadowOpacity ?? 0) > 0) {
-      ctx.shadowColor = layer.shadowColor ?? "rgba(0,0,0,0.5)";
-      ctx.shadowBlur = layer.shadowBlur ?? 0;
-      ctx.shadowOffsetX = layer.shadowOffsetX ?? 0;
-      ctx.shadowOffsetY = layer.shadowOffsetY ?? 0;
-    }
+      const DPR = 2;
+      const w = Math.max(1, Math.ceil(layer.width));
+      const h = Math.max(1, Math.ceil(layer.height));
+      const fontSize = layer.fontSize ?? 24;
+      const color = layer.fill ?? "#000000";
+      const lineHeight = layer.lineHeight ?? 1.4;
+      const align = layer.align ?? "right";
+      const letterSpacing = layer.letterSpacing ?? 0;
 
-    const align = layer.align ?? "right";
-    ctx.textAlign = align === "center" ? "center" : align === "left" ? "right" : "right";
-    const xPos = align === "center" ? w / 2 : w;
-
-    // Word-wrap
-    const words = (layer.text ?? "").split(/\s+/).filter(Boolean);
-    const lineH = fontSize * (layer.lineHeight ?? 1.4);
-    const lines: string[] = [];
-    let current = "";
-    for (const word of words) {
-      const test = current ? `${current} ${word}` : word;
-      if (ctx.measureText(test).width > w - 4 && current) {
-        lines.push(current);
-        current = word;
-      } else {
-        current = test;
+      let textShadow = "none";
+      if ((layer.shadowOpacity ?? 0) > 0 && layer.shadowColor) {
+        textShadow = `${layer.shadowOffsetX ?? 0}px ${layer.shadowOffsetY ?? 0}px ${layer.shadowBlur ?? 0}px ${layer.shadowColor}`;
       }
-    }
-    if (current) lines.push(current);
 
-    lines.forEach((line, i) => {
-      ctx.fillText(line, xPos, i * lineH + 2);
-    });
+      const cssAlign = align === "center" ? "center" : align === "left" ? "left" : "right";
+      const escapedText = (layer.text ?? "")
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/\n/g, "<br/>");
 
-    const image = new Image();
-    image.onload = () => setImg(image);
-    image.src = offscreen.toDataURL("image/png");
+      const svgW = w * DPR;
+      const svgH = h * DPR;
+      const fSize = fontSize * DPR;
+      const lSpacing = letterSpacing * DPR;
+
+      const svgString = `<svg xmlns="http://www.w3.org/2000/svg" width="${svgW}" height="${svgH}">
+  <style>${fontFaceCSS}</style>
+  <foreignObject width="100%" height="100%">
+    <div xmlns="http://www.w3.org/1999/xhtml" style="
+      width:${svgW}px; height:${svgH}px;
+      direction:rtl; text-align:${cssAlign};
+      font-family:'${family}',sans-serif; font-weight:${fontWeight};
+      font-size:${fSize}px; line-height:${lineHeight};
+      letter-spacing:${lSpacing}px; color:${color};
+      text-shadow:${textShadow};
+      word-wrap:break-word; overflow-wrap:break-word;
+      overflow:hidden; padding:0; margin:0; box-sizing:border-box;
+    ">${escapedText}</div>
+  </foreignObject>
+</svg>`;
+
+      const blob = new Blob([svgString], { type: "image/svg+xml;charset=utf-8" });
+      const url = URL.createObjectURL(blob);
+
+      const svgImg = new Image();
+      svgImg.onload = () => {
+        if (cancelled) { URL.revokeObjectURL(url); return; }
+        const offscreen = document.createElement("canvas");
+        offscreen.width = svgW;
+        offscreen.height = svgH;
+        const ctx = offscreen.getContext("2d")!;
+        ctx.drawImage(svgImg, 0, 0);
+        URL.revokeObjectURL(url);
+
+        const finalImg = new Image();
+        finalImg.onload = () => { if (!cancelled) setImg(finalImg); };
+        finalImg.src = offscreen.toDataURL("image/png");
+      };
+      svgImg.onerror = () => { URL.revokeObjectURL(url); if (!cancelled) setImg(null); };
+      svgImg.src = url;
+    })();
+
+    return () => { cancelled = true; };
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [layer.text, layer.fontFamily, layer.fontSize, layer.fill,
       layer.width, layer.height, layer.align, layer.lineHeight,
+      layer.letterSpacing,
       layer.shadowColor, layer.shadowBlur, layer.shadowOffsetX,
       layer.shadowOffsetY, layer.shadowOpacity]);
 
