@@ -208,7 +208,7 @@ function parseFontFamily(raw?: string): { family: string; style: string } {
 
 /**
  * Cache for base64-encoded @font-face declarations.
- * Key: "family:weight" → CSS @font-face string with data URL
+ * Key: "family:weight" → full CSS with ALL @font-face blocks (arabic, latin, etc.)
  */
 const fontFaceCache = new Map<string, string>();
 
@@ -217,29 +217,46 @@ async function getEmbeddedFontFace(family: string, weight: string): Promise<stri
   if (fontFaceCache.has(key)) return fontFaceCache.get(key)!;
 
   try {
-    // 1. Fetch Google Fonts CSS (browser UA → woff2)
+    // 1. Fetch Google Fonts CSS — returns MULTIPLE @font-face blocks
+    //    for different unicode-range subsets (arabic, latin, latin-ext, etc.)
     const cssUrl = `https://fonts.googleapis.com/css2?family=${family.replace(/ /g, "+")}:wght@${weight}&display=swap`;
     const cssResp = await fetch(cssUrl);
     const css = await cssResp.text();
 
-    // 2. Extract the first font-file URL from the CSS
-    const urlMatch = css.match(/url\(([^)]+)\)/);
-    if (!urlMatch?.[1]) return "";
-    const fontUrl = urlMatch[1].replace(/['"]/g, "");
+    // 2. Extract ALL font-file URLs from the CSS
+    const urlMatches = [...css.matchAll(/url\(([^)]+)\)/g)];
+    if (urlMatches.length === 0) return "";
 
-    // 3. Fetch font binary and convert to base64 data-url
-    const fontResp = await fetch(fontUrl);
-    const fontBlob = await fontResp.blob();
-    const base64: string = await new Promise((resolve) => {
-      const reader = new FileReader();
-      reader.onload = () => resolve(reader.result as string);
-      reader.readAsDataURL(fontBlob);
-    });
+    // 3. Fetch each font file and convert to base64
+    const base64Map = new Map<string, string>();
+    await Promise.all(
+      urlMatches.map(async (match) => {
+        const fontUrl = (match[1] || "").replace(/['"]/g, "");
+        if (!fontUrl || base64Map.has(fontUrl)) return;
+        try {
+          const fontResp = await fetch(fontUrl);
+          const fontBlob = await fontResp.blob();
+          const base64: string = await new Promise((resolve) => {
+            const reader = new FileReader();
+            reader.onload = () => resolve(reader.result as string);
+            reader.readAsDataURL(fontBlob);
+          });
+          base64Map.set(fontUrl, base64);
+        } catch { /* skip failed font files */ }
+      })
+    );
 
-    // 4. Build @font-face with embedded data URL
-    const fontFace = `@font-face { font-family: '${family}'; font-weight: ${weight}; src: url(${base64}) format('woff2'); }`;
-    fontFaceCache.set(key, fontFace);
-    return fontFace;
+    // 4. Replace all url() references in the original CSS with base64 data URLs
+    let embeddedCSS = css;
+    for (const [originalUrl, base64] of base64Map.entries()) {
+      embeddedCSS = embeddedCSS.replaceAll(`url(${originalUrl})`, `url(${base64})`);
+      // Also handle quoted versions
+      embeddedCSS = embeddedCSS.replaceAll(`url('${originalUrl}')`, `url(${base64})`);
+      embeddedCSS = embeddedCSS.replaceAll(`url("${originalUrl}")`, `url(${base64})`);
+    }
+
+    fontFaceCache.set(key, embeddedCSS);
+    return embeddedCSS;
   } catch {
     return "";
   }
