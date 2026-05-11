@@ -186,19 +186,14 @@ interface ShapeProps {
   onChange: (updates: Partial<CanvasLayer>) => void;
 }
 
-function TextShape({ layer, isSelected, onSelect, onChange }: ShapeProps) {
-  const shapeRef = useRef<Konva.Text>(null);
-  const trRef = useRef<Konva.Transformer>(null);
+const ARABIC_FONT_NAMES = ["Cairo", "Tajawal", "beIN Normal", "Dubai"];
+function isArabicFont(fontFamily?: string) {
+  if (!fontFamily) return false;
+  return ARABIC_FONT_NAMES.some((f) => fontFamily.startsWith(f));
+}
 
-  React.useEffect(() => {
-    if (isSelected && trRef.current && shapeRef.current) {
-      trRef.current.nodes([shapeRef.current]);
-      trRef.current.getLayer()?.batchDraw();
-    }
-  }, [isSelected]);
-
-  // Parse fontFamily stored as "FamilyName:weight, fallback"
-  let family = layer.fontFamily ?? "sans-serif";
+function parseFontFamily(raw?: string): { family: string; style: string } {
+  let family = raw ?? "sans-serif";
   let style = "normal";
   if (family.includes(":")) {
     const colonIdx = family.indexOf(":");
@@ -208,6 +203,111 @@ function TextShape({ layer, isSelected, onSelect, onChange }: ShapeProps) {
       style = "bold";
     }
   }
+  return { family, style };
+}
+
+/** Renders Arabic text on an offscreen HTML canvas with direction:rtl for full kashida + shaping support */
+function useArabicTextImage(layer: CanvasLayer) {
+  const [img, setImg] = useState<HTMLImageElement | null>(null);
+
+  useEffect(() => {
+    if (!isArabicFont(layer.fontFamily)) { setImg(null); return; }
+
+    const { family, style } = parseFontFamily(layer.fontFamily);
+    const DPR = 2;
+    const w = Math.max(1, Math.ceil(layer.width));
+    const h = Math.max(1, Math.ceil(layer.height));
+
+    const offscreen = document.createElement("canvas");
+    offscreen.width = w * DPR;
+    offscreen.height = h * DPR;
+    const ctx = offscreen.getContext("2d")!;
+    ctx.scale(DPR, DPR);
+    ctx.direction = "rtl";
+    ctx.textBaseline = "top";
+
+    const fontSize = layer.fontSize ?? 24;
+    const fontWeight = style === "bold" ? "700" : "400";
+    ctx.font = `${fontWeight} ${fontSize}px "${family}", sans-serif`;
+    ctx.fillStyle = layer.fill ?? "#000000";
+
+    if ((layer.shadowOpacity ?? 0) > 0) {
+      ctx.shadowColor = layer.shadowColor ?? "rgba(0,0,0,0.5)";
+      ctx.shadowBlur = layer.shadowBlur ?? 0;
+      ctx.shadowOffsetX = layer.shadowOffsetX ?? 0;
+      ctx.shadowOffsetY = layer.shadowOffsetY ?? 0;
+    }
+
+    const align = layer.align ?? "right";
+    ctx.textAlign = align === "center" ? "center" : align === "left" ? "right" : "right";
+    const xPos = align === "center" ? w / 2 : w;
+
+    // Word-wrap
+    const words = (layer.text ?? "").split(/\s+/).filter(Boolean);
+    const lineH = fontSize * (layer.lineHeight ?? 1.4);
+    const lines: string[] = [];
+    let current = "";
+    for (const word of words) {
+      const test = current ? `${current} ${word}` : word;
+      if (ctx.measureText(test).width > w - 4 && current) {
+        lines.push(current);
+        current = word;
+      } else {
+        current = test;
+      }
+    }
+    if (current) lines.push(current);
+
+    lines.forEach((line, i) => {
+      ctx.fillText(line, xPos, i * lineH + 2);
+    });
+
+    const image = new Image();
+    image.onload = () => setImg(image);
+    image.src = offscreen.toDataURL("image/png");
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [layer.text, layer.fontFamily, layer.fontSize, layer.fill,
+      layer.width, layer.height, layer.align, layer.lineHeight,
+      layer.shadowColor, layer.shadowBlur, layer.shadowOffsetX,
+      layer.shadowOffsetY, layer.shadowOpacity]);
+
+  return img;
+}
+
+function TextShape({ layer, isSelected, onSelect, onChange }: ShapeProps) {
+  const shapeRef = useRef<Konva.Text>(null);
+  const imgRef  = useRef<Konva.Image>(null);
+  const trRef   = useRef<Konva.Transformer>(null);
+  const arabicImg = useArabicTextImage(layer);
+  const useArabic = isArabicFont(layer.fontFamily) && arabicImg !== null;
+  const activeRef = useArabic ? imgRef : shapeRef;
+
+  React.useEffect(() => {
+    const node = activeRef.current as Konva.Node | null;
+    if (isSelected && trRef.current && node) {
+      trRef.current.nodes([node]);
+      trRef.current.getLayer()?.batchDraw();
+    }
+  }, [isSelected, useArabic, activeRef]);
+
+  const { family, style } = parseFontFamily(layer.fontFamily);
+
+  const dragHandlers = {
+    draggable: !layer.locked,
+    onClick: onSelect,
+    onTap: onSelect,
+    onDragEnd: (e: any) => onChange({ x: e.target.x(), y: e.target.y() }),
+    onTransformEnd: (e: any) => {
+      const node = e.target;
+      onChange({
+        x: node.x(), y: node.y(),
+        width: Math.max(5, node.width() * node.scaleX()),
+        height: Math.max(5, node.height() * node.scaleY()),
+        rotation: node.rotation(),
+      });
+      node.scaleX(1); node.scaleY(1);
+    },
+  };
 
   const shadowProps = {
     ...(layer.shadowColor ? { shadowColor: layer.shadowColor } : {}),
@@ -219,46 +319,42 @@ function TextShape({ layer, isSelected, onSelect, onChange }: ShapeProps) {
 
   return (
     <>
-      <Text
-        ref={shapeRef}
-        id={layer.id}
-        x={layer.x}
-        y={layer.y}
-        width={layer.width}
-        height={layer.height}
-        rotation={layer.rotation}
-        opacity={layer.opacity}
-        visible={layer.visible}
-        text={layer.text ?? ""}
-        fontSize={layer.fontSize ?? 24}
-        fontFamily={family}
-        fontStyle={style}
-        fill={layer.fill ?? "#000000"}
-        {...shadowProps}
-        lineHeight={layer.lineHeight ?? 1}
-        letterSpacing={layer.letterSpacing ?? 0}
-        wrap="word"
-        align={layer.align ?? "left"}
-        draggable={!layer.locked}
-        onClick={onSelect}
-        onTap={onSelect}
-        onDragEnd={(e) =>
-          onChange({ x: e.target.x(), y: e.target.y() })
-        }
-        onTransformEnd={() => {
-          const node = shapeRef.current;
-          if (!node) return;
-          onChange({
-            x: node.x(),
-            y: node.y(),
-            width: Math.max(5, node.width() * node.scaleX()),
-            height: Math.max(5, node.height() * node.scaleY()),
-            rotation: node.rotation(),
-          });
-          node.scaleX(1);
-          node.scaleY(1);
-        }}
-      />
+      {useArabic ? (
+        /* Arabic: rendered via offscreen canvas → KonvaImage for proper kashida */
+        <KonvaImage
+          ref={imgRef}
+          id={layer.id}
+          x={layer.x} y={layer.y}
+          width={layer.width} height={layer.height}
+          rotation={layer.rotation}
+          opacity={layer.opacity}
+          visible={layer.visible}
+          image={arabicImg!}
+          {...dragHandlers}
+        />
+      ) : (
+        /* Latin / non-Arabic: standard Konva Text */
+        <Text
+          ref={shapeRef}
+          id={layer.id}
+          x={layer.x} y={layer.y}
+          width={layer.width} height={layer.height}
+          rotation={layer.rotation}
+          opacity={layer.opacity}
+          visible={layer.visible}
+          text={layer.text ?? ""}
+          fontSize={layer.fontSize ?? 24}
+          fontFamily={family}
+          fontStyle={style}
+          fill={layer.fill ?? "#000000"}
+          {...shadowProps}
+          lineHeight={layer.lineHeight ?? 1}
+          letterSpacing={layer.letterSpacing ?? 0}
+          wrap="word"
+          align={layer.align ?? "left"}
+          {...dragHandlers}
+        />
+      )}
       {isSelected && (
         <Transformer
           ref={trRef}
@@ -273,6 +369,7 @@ function TextShape({ layer, isSelected, onSelect, onChange }: ShapeProps) {
 }
 
 function RectShape({ layer, isSelected, onSelect, onChange }: ShapeProps) {
+
   const shapeRef = useRef<Konva.Rect>(null);
   const trRef = useRef<Konva.Transformer>(null);
 
