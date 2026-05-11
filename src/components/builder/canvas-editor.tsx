@@ -867,7 +867,7 @@ export default function CanvasEditor({
       </aside>
 
       {/* ── CENTER: Toolbar + Canvas ───────────────────────────────────── */}
-      <div className="flex-1 flex flex-col overflow-hidden relative z-0">
+      <div className="flex-1 flex flex-col relative z-10">
         {/* Top Left: Undo / Redo */}
         <div className="absolute top-6 left-6 flex items-center gap-1 bg-[#12121a]/80 backdrop-blur-2xl border border-white/10 rounded-full shadow-lg p-1 z-50">
           <Button
@@ -1017,7 +1017,7 @@ export default function CanvasEditor({
         {/* Zoom controls placeholder (moved to root level below) */}
 
         {/* Stage container */}
-        <div className="flex-1 overflow-hidden bg-[#0c0c1a] flex items-center justify-center">
+        <div className="flex-1 overflow-hidden bg-[#0c0c1a] flex items-center justify-center" style={{ minHeight: 0 }}>
           <div className="relative shadow-2xl shadow-black/50">
             <Stage
               id="konva-stage"
