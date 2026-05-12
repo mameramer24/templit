@@ -93,7 +93,7 @@ interface CanvasLayer {
   fill?: string;
   lineHeight?: number;
   letterSpacing?: number;
-  align?: "left" | "center" | "right";
+  align?: "left" | "center" | "right" | "justify";
   // rect
   stroke?: string;
   strokeWidth?: number;
