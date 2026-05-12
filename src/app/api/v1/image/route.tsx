@@ -130,7 +130,7 @@ export async function GET(request: NextRequest) {
     });
 
     const page = await browser.newPage();
-    await page.setContent(pageHTML, { waitUntil: "networkidle0" });
+    await page.setContent(pageHTML, { waitUntil: "load" });
     await page.evaluate(() => document.fonts.ready);
 
     const screenshot = await page.screenshot({ type: "png", clip: { x: 0, y: 0, width: W, height: H } });
