@@ -225,9 +225,14 @@ export async function GET(request: NextRequest) {
             
             const isArabic = /[\u0600-\u06FF]/.test(text);
             
+            // Set default alignment based on language if not explicitly provided
+            const finalAlign = layer.align === "center" ? "center" : layer.align === "right" ? "right" : layer.align === "left" ? "left" : (isArabic ? "right" : "left");
+            const flexAlign = finalAlign === "center" ? "center" : finalAlign === "right" ? "flex-end" : "flex-start";
+            
             return (
               <div
                 key={layer.id}
+                dir={isArabic ? "rtl" : "ltr"}
                 style={{
                   display: "flex",
                   position: "absolute",
@@ -242,21 +247,14 @@ export async function GET(request: NextRequest) {
                   opacity,
                   ...(shadow ? { textShadow: shadow } : {}),
                   lineHeight: layer.lineHeight || 1.3,
-                  direction: isArabic ? "rtl" : "ltr",
-                  justifyContent: layer.align === "center" ? "center" : layer.align === "right" ? "flex-end" : "flex-start",
-                  alignItems: layer.align === "center" ? "center" : layer.align === "right" ? "flex-end" : "flex-start",
-                  textAlign: layer.align === "center" ? "center" : layer.align === "right" ? "right" : "left",
+                  justifyContent: flexAlign,
+                  alignItems: flexAlign,
+                  textAlign: finalAlign,
                 }}
               >
-                {text.split("\\n").map((line: string, i: number) => {
-                  // Satori often fails at Bidi layout (word ordering) even though it shapes Arabic letters correctly.
-                  // By splitting the line into words and reversing the array, we force Satori's LTR layout 
-                  // to place the words in the correct visual order for an RTL reader.
-                  const displayLine = isArabic ? line.split(" ").reverse().join(" ") : line;
-                  return (
-                    <span key={i} style={{ display: "flex" }}>{displayLine}</span>
-                  );
-                })}
+                {text.split("\\n").map((line: string, i: number) => (
+                  <span key={i} style={{ display: "flex" }}>{line}</span>
+                ))}
               </div>
             );
           }
