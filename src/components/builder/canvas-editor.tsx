@@ -293,7 +293,7 @@ function useArabicTextImage(layer: CanvasLayer) {
         textShadow = `${layer.shadowOffsetX ?? 0}px ${layer.shadowOffsetY ?? 0}px ${layer.shadowBlur ?? 0}px ${layer.shadowColor}`;
       }
 
-      const cssAlign = align === "center" ? "center" : align === "left" ? "left" : "right";
+      const cssAlign = align === "center" ? "center" : align === "left" ? "left" : align === "justify" ? "justify" : "right";
       const escapedText = (layer.text ?? "")
         .replace(/&/g, "&amp;")
         .replace(/</g, "&lt;")
