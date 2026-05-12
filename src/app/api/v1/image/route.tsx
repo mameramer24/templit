@@ -223,6 +223,8 @@ export async function GET(request: NextRequest) {
               familyName = familyName.split(":")[0];
             }
             
+            const isArabic = /[\u0600-\u06FF]/.test(text);
+            
             return (
               <div
                 key={layer.id}
@@ -240,13 +242,14 @@ export async function GET(request: NextRequest) {
                   opacity,
                   ...(shadow ? { textShadow: shadow } : {}),
                   lineHeight: layer.lineHeight || 1.3,
+                  direction: isArabic ? "rtl" : "ltr",
                   justifyContent: layer.align === "center" ? "center" : layer.align === "right" ? "flex-end" : "flex-start",
                   alignItems: layer.align === "center" ? "center" : layer.align === "right" ? "flex-end" : "flex-start",
                   textAlign: layer.align === "center" ? "center" : layer.align === "right" ? "right" : "left",
                 }}
               >
                 {text.split("\\n").map((line: string, i: number) => (
-                  <span key={i} style={{ display: "flex" }}>{line}</span>
+                  <span key={i} style={{ display: "flex", direction: isArabic ? "rtl" : "ltr" }}>{line}</span>
                 ))}
               </div>
             );
