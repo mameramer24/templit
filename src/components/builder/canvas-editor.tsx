@@ -220,12 +220,12 @@ function parseFontFamily(raw?: string): { family: string; style: string } {
  * Key: "family:weight" → TTF URL
  */
 const FONT_URLS: Record<string, string> = {
-  "Tajawal:200": "https://baavhgtfomxytgmiaqms.supabase.co/storage/v1/object/public/health/Untitled%20folder/ArbFONTS-Tajawal-ExtraLight.ttf",
-  "Tajawal:300": "https://baavhgtfomxytgmiaqms.supabase.co/storage/v1/object/public/health/Untitled%20folder/ArbFONTS-Tajawal-Light.ttf",
-  "Tajawal:400": "https://baavhgtfomxytgmiaqms.supabase.co/storage/v1/object/public/health/Untitled%20folder/ArbFONTS-Tajawal-Regular.ttf",
-  "Tajawal:700": "https://baavhgtfomxytgmiaqms.supabase.co/storage/v1/object/public/health/Untitled%20folder/ArbFONTS-Tajawal-Bold.ttf",
-  "Tajawal:800": "https://baavhgtfomxytgmiaqms.supabase.co/storage/v1/object/public/health/Untitled%20folder/ArbFONTS-Tajawal-ExtraBold.ttf",
-  "Tajawal:900": "https://baavhgtfomxytgmiaqms.supabase.co/storage/v1/object/public/health/Untitled%20folder/ArbFONTS-Tajawal-Black.ttf",
+  "Tajawal:200": "/fonts/tajawal/Tajawal-ExtraLight.ttf",
+  "Tajawal:300": "/fonts/tajawal/Tajawal-Light.ttf",
+  "Tajawal:400": "/fonts/tajawal/Tajawal-Regular.ttf",
+  "Tajawal:700": "/fonts/tajawal/Tajawal-Bold.ttf",
+  "Tajawal:800": "/fonts/tajawal/Tajawal-ExtraBold.ttf",
+  "Tajawal:900": "/fonts/tajawal/Tajawal-Black.ttf",
 };
 
 /**
