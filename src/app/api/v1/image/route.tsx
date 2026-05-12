@@ -1,98 +1,56 @@
 import { NextRequest, NextResponse } from "next/server";
+import { ImageResponse } from "next/og";
 import { db } from "@/lib/db";
 import { templates } from "@/lib/db/schema";
 import { eq } from "drizzle-orm";
 
 export const runtime = "nodejs";
-export const maxDuration = 30;
 
-function resolveText(layer: any, variables: Record<string, string>): string {
-  const raw = layer.text || "";
-  if (layer.name && variables[layer.name] !== undefined) return variables[layer.name]!;
-  if (variables[raw] !== undefined) return variables[raw]!;
-  return raw;
-}
+async function getFontBuffer(fontFamily: string, weight: number = 400): Promise<ArrayBuffer | null> {
+  const familyPart = fontFamily.split(",")[0];
+  if (!familyPart) return null;
+  const familyName = familyPart.replace(/['"]/g, "").trim();
+  let url = "";
 
-function esc(t: string): string {
-  return t.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;").replace(/\n/g, "<br>");
-}
-
-function hexRgba(hex: string, a: number) {
-  if (!hex.startsWith("#")) return hex;
-  const r = parseInt(hex.slice(1, 3), 16) || 0;
-  const g = parseInt(hex.slice(3, 5), 16) || 0;
-  const b = parseInt(hex.slice(5, 7), 16) || 0;
-  return `rgba(${r},${g},${b},${a})`;
-}
-
-function buildHTML(
-  canvas: { width: number; height: number; background: string },
-  layers: any[],
-  variables: Record<string, string>
-): string {
-  const W = canvas.width || 1200;
-  const H = canvas.height || 630;
-  const bg = canvas.background || "#ffffff";
-
-  let html = "";
-  for (const layer of layers.filter((l: any) => l.visible !== false)) {
-    const x = Math.round(layer.x ?? 0);
-    const y = Math.round(layer.y ?? 0);
-    const w = Math.round(layer.width ?? 100);
-    const h = Math.round(layer.height ?? 40);
-    const op = layer.opacity ?? 1;
-    const rot = layer.rotation ?? 0;
-    const transform = rot ? `transform:rotate(${rot}deg);` : "";
-
-    const shadow = (layer.shadowOpacity > 0 && layer.shadowColor)
-      ? `${layer.shadowOffsetX || 0}px ${layer.shadowOffsetY || 0}px ${layer.shadowBlur || 0}px ${hexRgba(layer.shadowColor, layer.shadowOpacity)}`
-      : "none";
-
-    const cr = Array.isArray(layer.cornerRadius)
-      ? `${layer.cornerRadius[0] || 0}px ${layer.cornerRadius[1] || 0}px ${layer.cornerRadius[2] || 0}px ${layer.cornerRadius[3] || 0}px`
-      : `${layer.cornerRadius || 0}px`;
-
-    if (layer.type === "rect") {
-      html += `<div style="position:absolute;left:${x}px;top:${y}px;width:${w}px;height:${h}px;background:${layer.fill || "#ccc"};border-radius:${cr};box-shadow:${shadow};opacity:${op};${transform}"></div>`;
-    }
-
-    if (layer.type === "image") {
-      const src = (layer.name && variables[layer.name]) ? variables[layer.name] : (layer.src || "");
-      if (src) {
-        html += `<img src="${src}" style="position:absolute;left:${x}px;top:${y}px;width:${w}px;height:${h}px;opacity:${op};border-radius:${cr};box-shadow:${shadow};object-fit:${layer.objectFit || "cover"};${transform}" crossorigin="anonymous"/>`;
-      }
-    }
-
-    if (layer.type === "text") {
-      const text = resolveText(layer, variables);
-      const isAr = /[\u0600-\u06FF]/.test(text);
-      const fontSize = layer.fontSize ?? 24;
-      let fam = (layer.fontFamily || "Inter").split(",")[0]!.replace(/['"]/g, "").trim();
-      if (fam.includes(":")) fam = fam.split(":")[0]!;
-      const align = layer.align || (isAr ? "right" : "left");
-      const dir = isAr ? "rtl" : "ltr";
-      const ts = (layer.shadowOpacity > 0 && layer.shadowColor)
-        ? `text-shadow:${layer.shadowOffsetX || 0}px ${layer.shadowOffsetY || 0}px ${layer.shadowBlur || 0}px ${hexRgba(layer.shadowColor, layer.shadowOpacity)};`
-        : "";
-
-      html += `<div dir="${dir}" style="position:absolute;left:${x}px;top:${y}px;width:${w}px;height:${h}px;color:${layer.fill || "#000"};font-family:'${fam}',sans-serif;font-size:${fontSize}px;line-height:${layer.lineHeight || 1.3};letter-spacing:${layer.letterSpacing ?? 0}px;text-align:${align};direction:${dir};opacity:${op};overflow:hidden;word-wrap:break-word;overflow-wrap:break-word;${ts}${transform}">${esc(text)}</div>`;
-    }
+  if (familyName === "beIN Normal") {
+    url = "https://raw.githubusercontent.com/abdalali/fonts/master/beIN-Normal.ttf";
+  } else if (familyName === "Dubai") {
+    url = "https://raw.githubusercontent.com/MizterThe1st/fonts/master/Dubai-Regular.ttf";
+  } else if (familyName === "Tajawal") {
+    url = weight === 700
+      ? "https://raw.githubusercontent.com/google/fonts/main/ofl/tajawal/Tajawal-Bold.ttf"
+      : "https://raw.githubusercontent.com/google/fonts/main/ofl/tajawal/Tajawal-Regular.ttf";
+  } else if (familyName === "Cairo") {
+    url = weight === 700
+      ? "https://raw.githubusercontent.com/google/fonts/main/ofl/cairo/Cairo-Bold.ttf"
+      : "https://raw.githubusercontent.com/google/fonts/main/ofl/cairo/Cairo-Regular.ttf";
+  } else if (familyName === "Inter") {
+    url = "https://raw.githubusercontent.com/google/fonts/main/ofl/inter/Inter%5Bslnt%2Cwght%5D.ttf";
   }
 
-  return `<!DOCTYPE html><html><head><meta charset="utf-8">
-<link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@200;300;400;500;700;800;900&family=Cairo:wght@200;300;400;500;600;700;800;900&family=Inter:wght@100;200;300;400;500;600;700;800;900&display=swap" rel="stylesheet">
-<style>
-@font-face{font-family:'beIN Normal';src:url('https://raw.githubusercontent.com/abdalali/fonts/master/beIN-Normal.ttf') format('truetype')}
-@font-face{font-family:'Dubai';src:url('https://raw.githubusercontent.com/MizterThe1st/fonts/master/Dubai-Regular.ttf') format('truetype')}
-*{margin:0;padding:0;box-sizing:border-box}
-html,body{width:${W}px;height:${H}px;overflow:hidden;-webkit-font-smoothing:antialiased}
-.c{width:${W}px;height:${H}px;background:${bg};position:relative;overflow:hidden}
-</style></head><body><div class="c">${html}</div></body></html>`;
+  if (!url && familyName !== "sans-serif" && familyName !== "serif") {
+    try {
+      const gUrl = `https://fonts.googleapis.com/css2?family=${familyName.replace(/ /g, "+")}:wght@${weight}`;
+      const cssRes = await fetch(gUrl, {
+        headers: { "User-Agent": "Mozilla/5.0 (Windows NT 6.1; rv:33.0) Gecko/20120101 Firefox/33.0" }
+      });
+      if (cssRes.ok) {
+        const cssText = await cssRes.text();
+        const match = cssText.match(/url\((https:\/\/[^)]+\.ttf)\)/);
+        if (match && match[1]) url = match[1];
+      }
+    } catch {}
+  }
+
+  if (!url) return null;
+  try {
+    const res = await fetch(url);
+    if (res.ok) return await res.arrayBuffer();
+  } catch {}
+  return null;
 }
 
 export async function GET(request: NextRequest) {
-  let browser;
   try {
     const url = new URL(request.url);
     const templateId = url.searchParams.get("templateId");
@@ -112,37 +70,159 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: "Template not found" }, { status: 404 });
     }
 
+    function hexToRgba(hex: string, alpha: number) {
+      if (!hex.startsWith("#")) return hex;
+      const r = parseInt(hex.slice(1, 3), 16) || 0;
+      const g = parseInt(hex.slice(3, 5), 16) || 0;
+      const b = parseInt(hex.slice(5, 7), 16) || 0;
+      return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+    }
+
     const canvas = template.canvas as { width: number; height: number; background: string };
     const layers = (template.layers as any[]) || [];
     const W = canvas.width || 1200;
     const H = canvas.height || 630;
+    const bg = canvas.background || "#ffffff";
 
-    const pageHTML = buildHTML(canvas, layers, variables);
+    function resolveText(layer: any): string {
+      const raw = layer.text || "";
+      if (layer.name && variables[layer.name] !== undefined) return variables[layer.name]!;
+      if (variables[raw] !== undefined) return variables[raw]!;
+      return raw;
+    }
 
-    const chromium = (await import("@sparticuz/chromium")).default;
-    const puppeteer = (await import("puppeteer-core")).default;
-
-    browser = await puppeteer.launch({
-      args: chromium.args,
-      defaultViewport: { width: W, height: H, deviceScaleFactor: 2 },
-      executablePath: await chromium.executablePath(),
-      headless: true,
+    const uniqueFonts = new Set<{ family: string; weight: number }>();
+    layers.forEach((l: any) => {
+      if (l.type === "text" && l.visible !== false) {
+        let weight = 400;
+        let familyPart = (l.fontFamily || "Inter").split(",")[0];
+        let familyName = (familyPart || "").replace(/['"]/g, "").trim();
+        if (familyName.includes(":")) {
+          const parts = familyName.split(":");
+          familyName = parts[0];
+          weight = parseInt(parts[1]) || 400;
+        }
+        uniqueFonts.add({ family: familyName, weight });
+      }
     });
 
-    const page = await browser.newPage();
-    await page.setContent(pageHTML, { waitUntil: "load" });
-    await page.evaluate(() => document.fonts.ready);
+    const fontsData: any[] = [];
+    for (const { family, weight } of uniqueFonts) {
+      const buf = await getFontBuffer(family, weight);
+      if (buf) {
+        fontsData.push({ name: family, data: buf, weight, style: "normal" });
+      }
+    }
 
-    const screenshot = await page.screenshot({ type: "png", clip: { x: 0, y: 0, width: W, height: H } });
-    await browser.close();
-    browser = null;
+    if (fontsData.length === 0) {
+      const fallbackBuf = await getFontBuffer("Inter", 400);
+      if (fallbackBuf) {
+        fontsData.push({ name: "Inter", data: fallbackBuf, weight: 400, style: "normal" });
+      }
+    }
 
-    return new Response(Buffer.from(screenshot), {
-      headers: { "Content-Type": "image/png", "Cache-Control": "public, max-age=31536000, immutable" },
-    });
+    const element = (
+      <div
+        style={{
+          display: "flex",
+          width: W,
+          height: H,
+          backgroundColor: bg,
+          position: "relative",
+          overflow: "hidden",
+        }}
+      >
+        {layers.filter((l: any) => l.visible !== false).map((layer: any) => {
+          const x = Math.round(layer.x ?? 0);
+          const y = Math.round(layer.y ?? 0);
+          const w = Math.round(layer.width ?? 100);
+          const h = Math.round(layer.height ?? 40);
+          const opacity = layer.opacity ?? 1;
+
+          const shadow = (layer.shadowOpacity && layer.shadowOpacity > 0 && layer.shadowColor)
+            ? `${layer.shadowOffsetX || 0}px ${layer.shadowOffsetY || 0}px ${layer.shadowBlur || 0}px ${hexToRgba(layer.shadowColor, layer.shadowOpacity)}`
+            : undefined;
+
+          const cr = Array.isArray(layer.cornerRadius)
+            ? `${layer.cornerRadius[0] || 0}px ${layer.cornerRadius[1] || 0}px ${layer.cornerRadius[2] || 0}px ${layer.cornerRadius[3] || 0}px`
+            : `${layer.cornerRadius || 0}px`;
+
+          if (layer.type === "rect") {
+            return (
+              <div key={layer.id} style={{
+                display: "flex", position: "absolute",
+                left: x, top: y, width: w, height: h,
+                backgroundColor: layer.fill || "#cccccc",
+                borderRadius: cr,
+                ...(shadow ? { boxShadow: shadow } : {}),
+                opacity,
+              }} />
+            );
+          }
+
+          if (layer.type === "image") {
+            const src = (layer.name && variables[layer.name]) ? variables[layer.name]! : (layer.src || null);
+            if (!src) return null;
+            return (
+              <img key={layer.id} src={src} style={{
+                position: "absolute",
+                left: x, top: y, width: w, height: h,
+                opacity, borderRadius: cr,
+                ...(shadow ? { boxShadow: shadow } : {}),
+                objectFit: layer.objectFit || "cover",
+              }} />
+            );
+          }
+
+          if (layer.type === "text") {
+            const text = resolveText(layer);
+            const fontSize = layer.fontSize ?? 24;
+            let familyPart = (layer.fontFamily || "Inter").split(",")[0];
+            let familyName = (familyPart || "").replace(/['"]/g, "").trim();
+            if (familyName.includes(":")) familyName = familyName.split(":")[0]!;
+
+            const isArabic = /[\u0600-\u06FF]/.test(text);
+            const align = layer.align || (isArabic ? "right" : "left");
+
+            return (
+              <div
+                key={layer.id}
+                dir={isArabic ? "rtl" : "ltr"}
+                style={{
+                  display: "flex",
+                  position: "absolute",
+                  left: x,
+                  top: y,
+                  width: w,
+                  height: h,
+                  color: layer.fill || "#000000",
+                  fontSize,
+                  fontFamily: `"${familyName}"`,
+                  letterSpacing: layer.letterSpacing ?? 0,
+                  lineHeight: layer.lineHeight || 1.3,
+                  textAlign: align as any,
+                  opacity,
+                  ...(shadow ? { textShadow: shadow } : {}),
+                  overflow: "hidden",
+                  wordBreak: "break-word",
+                }}
+              >
+                {text}
+              </div>
+            );
+          }
+
+          return null;
+        })}
+      </div>
+    );
+
+    return new ImageResponse(element, { width: W, height: H, fonts: fontsData });
   } catch (err) {
-    if (browser) try { await browser.close(); } catch {}
-    console.error("[GET /api/v1/image] Render Error:", err);
-    return NextResponse.json({ error: "Image rendering failed", details: String(err) }, { status: 500 });
+    console.error("[GET /api/v1/image] Satori render Error:", err);
+    return NextResponse.json(
+      { error: "Image rendering failed", details: String(err) },
+      { status: 500 }
+    );
   }
 }
