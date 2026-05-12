@@ -137,7 +137,7 @@ export async function GET(request: NextRequest) {
     await browser.close();
     browser = null;
 
-    return new Response(screenshot, {
+    return new Response(Buffer.from(screenshot), {
       headers: { "Content-Type": "image/png", "Cache-Control": "public, max-age=31536000, immutable" },
     });
   } catch (err) {
