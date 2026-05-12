@@ -1,3 +1,47 @@
+/* ── Self-hosted Tajawal Arabic font ────────────────────────────── */
+@font-face {
+  font-family: 'Tajawal';
+  font-weight: 200;
+  font-style: normal;
+  font-display: swap;
+  src: url('https://baavhgtfomxytgmiaqms.supabase.co/storage/v1/object/public/health/Untitled%20folder/ArbFONTS-Tajawal-ExtraLight.ttf') format('truetype');
+}
+@font-face {
+  font-family: 'Tajawal';
+  font-weight: 300;
+  font-style: normal;
+  font-display: swap;
+  src: url('https://baavhgtfomxytgmiaqms.supabase.co/storage/v1/object/public/health/Untitled%20folder/ArbFONTS-Tajawal-Light.ttf') format('truetype');
+}
+@font-face {
+  font-family: 'Tajawal';
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+  src: url('https://baavhgtfomxytgmiaqms.supabase.co/storage/v1/object/public/health/Untitled%20folder/ArbFONTS-Tajawal-Regular.ttf') format('truetype');
+}
+@font-face {
+  font-family: 'Tajawal';
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+  src: url('https://baavhgtfomxytgmiaqms.supabase.co/storage/v1/object/public/health/Untitled%20folder/ArbFONTS-Tajawal-Bold.ttf') format('truetype');
+}
+@font-face {
+  font-family: 'Tajawal';
+  font-weight: 800;
+  font-style: normal;
+  font-display: swap;
+  src: url('https://baavhgtfomxytgmiaqms.supabase.co/storage/v1/object/public/health/Untitled%20folder/ArbFONTS-Tajawal-ExtraBold.ttf') format('truetype');
+}
+@font-face {
+  font-family: 'Tajawal';
+  font-weight: 900;
+  font-style: normal;
+  font-display: swap;
+  src: url('https://baavhgtfomxytgmiaqms.supabase.co/storage/v1/object/public/health/Untitled%20folder/ArbFONTS-Tajawal-Black.ttf') format('truetype');
+}
+
 @import "tailwindcss";
 @import "tw-animate-css";
 @import "shadcn/tailwind.css";

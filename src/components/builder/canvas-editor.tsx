@@ -195,6 +195,8 @@ function isArabicFont(fontFamily?: string) {
 function parseFontFamily(raw?: string): { family: string; style: string } {
   let family = raw ?? "sans-serif";
   let style = "normal";
+
+  // Handle weight encoded after colon: "Tajawal:700, sans-serif"
   if (family.includes(":")) {
     const colonIdx = family.indexOf(":");
     const weightPart = family.slice(colonIdx + 1).trim();
@@ -203,12 +205,31 @@ function parseFontFamily(raw?: string): { family: string; style: string } {
       style = "bold";
     }
   }
+
+  // Strip CSS fallback fonts: ", sans-serif", ", serif", etc.
+  // e.g. "Tajawal, sans-serif" → "Tajawal"
+  if (family.includes(",")) {
+    family = family.split(",")[0]!.trim();
+  }
+
   return { family, style };
 }
 
 /**
+ * Direct font URLs hosted on Supabase (no CORS issues).
+ * Key: "family:weight" → TTF URL
+ */
+const FONT_URLS: Record<string, string> = {
+  "Tajawal:200": "https://baavhgtfomxytgmiaqms.supabase.co/storage/v1/object/public/health/Untitled%20folder/ArbFONTS-Tajawal-ExtraLight.ttf",
+  "Tajawal:300": "https://baavhgtfomxytgmiaqms.supabase.co/storage/v1/object/public/health/Untitled%20folder/ArbFONTS-Tajawal-Light.ttf",
+  "Tajawal:400": "https://baavhgtfomxytgmiaqms.supabase.co/storage/v1/object/public/health/Untitled%20folder/ArbFONTS-Tajawal-Regular.ttf",
+  "Tajawal:700": "https://baavhgtfomxytgmiaqms.supabase.co/storage/v1/object/public/health/Untitled%20folder/ArbFONTS-Tajawal-Bold.ttf",
+  "Tajawal:800": "https://baavhgtfomxytgmiaqms.supabase.co/storage/v1/object/public/health/Untitled%20folder/ArbFONTS-Tajawal-ExtraBold.ttf",
+  "Tajawal:900": "https://baavhgtfomxytgmiaqms.supabase.co/storage/v1/object/public/health/Untitled%20folder/ArbFONTS-Tajawal-Black.ttf",
+};
+
+/**
  * Cache for base64-encoded @font-face declarations.
- * Key: "family:weight" → full CSS with ALL @font-face blocks (arabic, latin, etc.)
  */
 const fontFaceCache = new Map<string, string>();
 
@@ -216,47 +237,23 @@ async function getEmbeddedFontFace(family: string, weight: string): Promise<stri
   const key = `${family}:${weight}`;
   if (fontFaceCache.has(key)) return fontFaceCache.get(key)!;
 
+  // Find direct URL for this font+weight
+  const ttfUrl = FONT_URLS[key];
+  if (!ttfUrl) return "";
+
   try {
-    // 1. Fetch Google Fonts CSS — returns MULTIPLE @font-face blocks
-    //    for different unicode-range subsets (arabic, latin, latin-ext, etc.)
-    const cssUrl = `https://fonts.googleapis.com/css2?family=${family.replace(/ /g, "+")}:wght@${weight}&display=swap`;
-    const cssResp = await fetch(cssUrl);
-    const css = await cssResp.text();
+    // Fetch TTF binary and convert to base64 data URL
+    const resp = await fetch(ttfUrl);
+    const blob = await resp.blob();
+    const base64: string = await new Promise((resolve) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(reader.result as string);
+      reader.readAsDataURL(blob);
+    });
 
-    // 2. Extract ALL font-file URLs from the CSS
-    const urlMatches = [...css.matchAll(/url\(([^)]+)\)/g)];
-    if (urlMatches.length === 0) return "";
-
-    // 3. Fetch each font file and convert to base64
-    const base64Map = new Map<string, string>();
-    await Promise.all(
-      urlMatches.map(async (match) => {
-        const fontUrl = (match[1] || "").replace(/['"]/g, "");
-        if (!fontUrl || base64Map.has(fontUrl)) return;
-        try {
-          const fontResp = await fetch(fontUrl);
-          const fontBlob = await fontResp.blob();
-          const base64: string = await new Promise((resolve) => {
-            const reader = new FileReader();
-            reader.onload = () => resolve(reader.result as string);
-            reader.readAsDataURL(fontBlob);
-          });
-          base64Map.set(fontUrl, base64);
-        } catch (_e) { /* skip failed font files */ }
-      })
-    );
-
-    // 4. Replace all url() references in the original CSS with base64 data URLs
-    let embeddedCSS = css;
-    for (const [originalUrl, base64] of base64Map.entries()) {
-      embeddedCSS = embeddedCSS.replaceAll(`url(${originalUrl})`, `url(${base64})`);
-      // Also handle quoted versions
-      embeddedCSS = embeddedCSS.replaceAll(`url('${originalUrl}')`, `url(${base64})`);
-      embeddedCSS = embeddedCSS.replaceAll(`url("${originalUrl}")`, `url(${base64})`);
-    }
-
-    fontFaceCache.set(key, embeddedCSS);
-    return embeddedCSS;
+    const fontFaceCSS = `@font-face { font-family: '${family}'; font-weight: ${weight}; src: url(${base64}) format('truetype'); }`;
+    fontFaceCache.set(key, fontFaceCSS);
+    return fontFaceCSS;
   } catch (_e) {
     return "";
   }
@@ -325,25 +322,26 @@ function useArabicTextImage(layer: CanvasLayer) {
   </foreignObject>
 </svg>`;
 
-      const blob = new Blob([svgString], { type: "image/svg+xml;charset=utf-8" });
-      const url = URL.createObjectURL(blob);
+      // Use data: URL instead of Blob URL to avoid tainted canvas issues
+      const encodedSvg = encodeURIComponent(svgString);
+      const dataUrl = `data:image/svg+xml;charset=utf-8,${encodedSvg}`;
 
       const svgImg = new Image();
       svgImg.onload = () => {
-        if (cancelled) { URL.revokeObjectURL(url); return; }
+        if (cancelled) return;
+        // Draw SVG to canvas to get a clean bitmap
         const offscreen = document.createElement("canvas");
         offscreen.width = svgW;
         offscreen.height = svgH;
         const ctx = offscreen.getContext("2d")!;
         ctx.drawImage(svgImg, 0, 0);
-        URL.revokeObjectURL(url);
 
         const finalImg = new Image();
         finalImg.onload = () => { if (!cancelled) setImg(finalImg); };
         finalImg.src = offscreen.toDataURL("image/png");
       };
-      svgImg.onerror = () => { URL.revokeObjectURL(url); if (!cancelled) setImg(null); };
-      svgImg.src = url;
+      svgImg.onerror = () => { if (!cancelled) setImg(null); };
+      svgImg.src = dataUrl;
     })();
 
     return () => { cancelled = true; };
