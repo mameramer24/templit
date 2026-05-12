@@ -312,6 +312,7 @@ function useArabicTextImage(layer: CanvasLayer) {
     <div xmlns="http://www.w3.org/1999/xhtml" style="
       width:${svgW}px; height:${svgH}px;
       direction:rtl; text-align:${cssAlign};
+      ${cssAlign === "justify" ? "text-justify: kashida; text-kashida-space: 100%; -moz-text-align-last: right; text-align-last: right;" : ""}
       font-family:'${family}',sans-serif; font-weight:${fontWeight};
       font-size:${fSize}px; line-height:${lineHeight};
       letter-spacing:${lSpacing}px; color:${color};
