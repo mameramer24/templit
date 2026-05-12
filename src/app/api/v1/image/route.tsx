@@ -128,7 +128,7 @@ export async function GET(request: NextRequest) {
       create: { width: W, height: H, channels: 4, background: { ...bg, alpha: 255 } },
     }).composite(composites).png().toBuffer();
 
-    return new Response(result, { headers: { "Content-Type": "image/png" } });
+    return new Response(new Uint8Array(result), { headers: { "Content-Type": "image/png" } });
   } catch (err) {
     console.error("[GET /api/v1/image] Error:", err);
     return NextResponse.json({ error: "Failed", details: String(err) }, { status: 500 });
