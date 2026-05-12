@@ -126,7 +126,7 @@ export async function GET(request: NextRequest) {
       args: chromium.args,
       defaultViewport: { width: W, height: H, deviceScaleFactor: 2 },
       executablePath: await chromium.executablePath(),
-      headless: chromium.headless,
+      headless: true,
     });
 
     const page = await browser.newPage();
