@@ -248,9 +248,15 @@ export async function GET(request: NextRequest) {
                   textAlign: layer.align === "center" ? "center" : layer.align === "right" ? "right" : "left",
                 }}
               >
-                {text.split("\\n").map((line: string, i: number) => (
-                  <span key={i} style={{ display: "flex", direction: isArabic ? "rtl" : "ltr" }}>{line}</span>
-                ))}
+                {text.split("\\n").map((line: string, i: number) => {
+                  // Satori often fails at Bidi layout (word ordering) even though it shapes Arabic letters correctly.
+                  // By splitting the line into words and reversing the array, we force Satori's LTR layout 
+                  // to place the words in the correct visual order for an RTL reader.
+                  const displayLine = isArabic ? line.split(" ").reverse().join(" ") : line;
+                  return (
+                    <span key={i} style={{ display: "flex" }}>{displayLine}</span>
+                  );
+                })}
               </div>
             );
           }
