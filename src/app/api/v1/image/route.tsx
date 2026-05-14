@@ -65,10 +65,16 @@ export async function GET(request: NextRequest) {
     const composites: sharp.OverlayOptions[] = [];
 
     for (const layer of layers.filter((l: any) => l.visible !== false)) {
-      const x = Math.max(0, Math.round(layer.x ?? 0));
-      const y = Math.max(0, Math.round(layer.y ?? 0));
-      const w = Math.max(1, Math.round(layer.width ?? 100));
-      const h = Math.max(1, Math.round(layer.height ?? 40));
+      let x = Math.max(0, Math.round(layer.x ?? 0));
+      let y = Math.max(0, Math.round(layer.y ?? 0));
+      let w = Math.max(1, Math.round(layer.width ?? 100));
+      let h = Math.max(1, Math.round(layer.height ?? 40));
+
+      // Clamp to canvas bounds
+      if (x >= W || y >= H) continue;
+      if (x + w > W) w = W - x;
+      if (y + h > H) h = H - y;
+      if (w < 1 || h < 1) continue;
 
       if (layer.type === "rect") {
         const c = hexRgb(layer.fill || "#cccccc");
@@ -105,7 +111,7 @@ export async function GET(request: NextRequest) {
         const pangoSize = fontSize * 1024;
 
         try {
-          const textBuf = await sharp({
+          let textBuf = await sharp({
             text: {
               text: `<span foreground="rgb(${color.r},${color.g},${color.b})" font_family="${fam}" font_size="${pangoSize}">${esc(text)}</span>`,
               fontfile: fontPath,
@@ -116,6 +122,12 @@ export async function GET(request: NextRequest) {
               dpi: 72,
             },
           }).png().toBuffer();
+
+          // Ensure text image fits within bounds
+          const meta = await sharp(textBuf).metadata();
+          if (meta.width && meta.height && (meta.width > w || meta.height > h)) {
+            textBuf = await sharp(textBuf).resize(w, h, { fit: "inside", withoutEnlargement: false }).png().toBuffer();
+          }
 
           composites.push({ input: textBuf, left: x, top: y });
         } catch (e) {
