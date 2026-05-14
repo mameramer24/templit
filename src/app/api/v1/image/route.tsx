@@ -70,7 +70,7 @@ html,body{width:${W}px;height:${H}px;overflow:hidden}
 </style></head><body><div class="c">${els}</div></body></html>`;
 }
 
-const CHROMIUM_URL = "https://github.com/nichochar/chromium-binaryies/releases/download/v131.0.0/chromium-v131.0.0-pack.tar";
+const CHROMIUM_URL = "https://github.com/Sparticuz/chromium/releases/download/v131.0.0/chromium-v131.0.0-pack.x64.tar";
 
 export async function GET(request: NextRequest) {
   let browser: any = null;
