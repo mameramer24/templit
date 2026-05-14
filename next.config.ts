@@ -14,7 +14,7 @@ const nextConfig: NextConfig = {
   reactStrictMode: true,
 
   // ── Externalize heavy native packages ────────────────────────────────────
-  serverExternalPackages: ["@sparticuz/chromium", "puppeteer-core"],
+  serverExternalPackages: ["@sparticuz/chromium-min", "puppeteer-core"],
 
   // ── Turbopack config (Next.js 16 default bundler) ────────────────────────
   // Empty object = enable Turbopack with defaults (satisfies the CLI flag check)
