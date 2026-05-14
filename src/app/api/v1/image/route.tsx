@@ -1,44 +1,25 @@
 import { NextRequest, NextResponse } from "next/server";
+import { ImageResponse } from "next/og";
 import { db } from "@/lib/db";
 import { templates } from "@/lib/db/schema";
 import { eq } from "drizzle-orm";
-import sharp from "sharp";
-import fs from "fs";
 
 export const runtime = "nodejs";
 
-const FONT_CACHE = "/tmp/templit-fonts";
-
-async function getFont(name: string, url: string): Promise<string> {
-  const p = `${FONT_CACHE}/${name}.ttf`;
-  if (fs.existsSync(p)) return p;
-  fs.mkdirSync(FONT_CACHE, { recursive: true });
-  const r = await fetch(url);
-  fs.writeFileSync(p, Buffer.from(await r.arrayBuffer()));
-  return p;
-}
-
-function getFontUrl(fam: string, w: number): string {
-  if (fam === "Tajawal") return w >= 700
+async function getFontBuffer(family: string, weight: number = 400): Promise<ArrayBuffer | null> {
+  const name = family.replace(/['"]/g, "").trim();
+  let url = "";
+  if (name === "Tajawal") url = weight >= 700
     ? "https://raw.githubusercontent.com/google/fonts/main/ofl/tajawal/Tajawal-Bold.ttf"
     : "https://raw.githubusercontent.com/google/fonts/main/ofl/tajawal/Tajawal-Regular.ttf";
-  if (fam === "Cairo") return w >= 700
+  else if (name === "Cairo") url = weight >= 700
     ? "https://raw.githubusercontent.com/google/fonts/main/ofl/cairo/Cairo-Bold.ttf"
     : "https://raw.githubusercontent.com/google/fonts/main/ofl/cairo/Cairo-Regular.ttf";
-  return "https://raw.githubusercontent.com/google/fonts/main/ofl/tajawal/Tajawal-Regular.ttf";
-}
-
-function hexRgb(hex: string) {
-  if (!hex?.startsWith("#")) return { r: 0, g: 0, b: 0 };
-  return {
-    r: parseInt(hex.slice(1, 3), 16) || 0,
-    g: parseInt(hex.slice(3, 5), 16) || 0,
-    b: parseInt(hex.slice(5, 7), 16) || 0,
-  };
-}
-
-function esc(t: string) {
-  return t.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+  else if (name === "beIN Normal") url = "https://raw.githubusercontent.com/abdalali/fonts/master/beIN-Normal.ttf";
+  else if (name === "Dubai") url = "https://raw.githubusercontent.com/MizterThe1st/fonts/master/Dubai-Regular.ttf";
+  else url = "https://raw.githubusercontent.com/google/fonts/main/ofl/tajawal/Tajawal-Regular.ttf";
+  try { const r = await fetch(url); if (r.ok) return await r.arrayBuffer(); } catch {}
+  return null;
 }
 
 export async function GET(request: NextRequest) {
@@ -49,9 +30,7 @@ export async function GET(request: NextRequest) {
     if (!templateId) return NextResponse.json({ error: "templateId required" }, { status: 400 });
 
     let variables: Record<string, string> = {};
-    if (varsParam) {
-      try { variables = JSON.parse(Buffer.from(varsParam, "base64").toString("utf-8")); } catch {}
-    }
+    if (varsParam) { try { variables = JSON.parse(Buffer.from(varsParam, "base64").toString("utf-8")); } catch {} }
 
     const [template] = await db.select().from(templates).where(eq(templates.id, templateId)).limit(1);
     if (!template) return NextResponse.json({ error: "Not found" }, { status: 404 });
@@ -60,87 +39,89 @@ export async function GET(request: NextRequest) {
     const layers = (template.layers as any[]) || [];
     const W = canvas.width || 1200;
     const H = canvas.height || 630;
-    const bg = hexRgb(canvas.background || "#ffffff");
 
-    const composites: sharp.OverlayOptions[] = [];
-
-    for (const layer of layers.filter((l: any) => l.visible !== false)) {
-      let x = Math.max(0, Math.round(layer.x ?? 0));
-      let y = Math.max(0, Math.round(layer.y ?? 0));
-      let w = Math.max(1, Math.round(layer.width ?? 100));
-      let h = Math.max(1, Math.round(layer.height ?? 40));
-
-      // Clamp to canvas bounds
-      if (x >= W || y >= H) continue;
-      if (x + w > W) w = W - x;
-      if (y + h > H) h = H - y;
-      if (w < 1 || h < 1) continue;
-
-      if (layer.type === "rect") {
-        const c = hexRgb(layer.fill || "#cccccc");
-        const cr = layer.cornerRadius || 0;
-        const op = layer.opacity ?? 1;
-        const svg = `<svg width="${w}" height="${h}"><rect width="${w}" height="${h}" rx="${cr}" ry="${cr}" fill="rgb(${c.r},${c.g},${c.b})" opacity="${op}"/></svg>`;
-        composites.push({ input: Buffer.from(svg), left: x, top: y });
-      }
-
-      if (layer.type === "image") {
-        const src = (layer.name && variables[layer.name]) ? variables[layer.name]! : (layer.src || "");
-        if (src) {
-          try {
-            const imgRes = await fetch(src);
-            const imgBuf = Buffer.from(await imgRes.arrayBuffer());
-            const resized = await sharp(imgBuf).resize(w, h, { fit: "cover" }).png().toBuffer();
-            composites.push({ input: resized, left: x, top: y });
-          } catch {}
-        }
-      }
-
-      if (layer.type === "text") {
-        const raw = layer.text || "";
-        const text = (layer.name && variables[layer.name] !== undefined) ? variables[layer.name]! : raw;
-        if (!text) continue;
-
-        const fontSize = layer.fontSize ?? 24;
-        let fam = (layer.fontFamily || "Tajawal").split(",")[0]!.replace(/['"]/g, "").trim();
-        if (fam.includes(":")) fam = fam.split(":")[0]!;
-        const color = hexRgb(layer.fill || "#000000");
-        const align = layer.align === "center" ? "centre" : layer.align === "left" ? "left" : "right";
-
-        const fontPath = await getFont(`${fam}-400`, getFontUrl(fam, 400));
-        const pangoSize = fontSize * 1024;
-
-        try {
-          let textBuf = await sharp({
-            text: {
-              text: `<span foreground="rgb(${color.r},${color.g},${color.b})" font_family="${fam}" font_size="${pangoSize}">${esc(text)}</span>`,
-              fontfile: fontPath,
-              width: w,
-              height: h,
-              align: align as any,
-              rgba: true,
-              dpi: 72,
-            },
-          }).png().toBuffer();
-
-          // Ensure text image fits within bounds
-          const meta = await sharp(textBuf).metadata();
-          if (meta.width && meta.height && (meta.width > w || meta.height > h)) {
-            textBuf = await sharp(textBuf).resize(w, h, { fit: "inside", withoutEnlargement: false }).png().toBuffer();
-          }
-
-          composites.push({ input: textBuf, left: x, top: y });
-        } catch (e) {
-          console.error("Text render error:", e);
-        }
-      }
+    function hexRgba(hex: string, a: number) {
+      if (!hex?.startsWith("#")) return hex;
+      return `rgba(${parseInt(hex.slice(1,3),16)||0},${parseInt(hex.slice(3,5),16)||0},${parseInt(hex.slice(5,7),16)||0},${a})`;
     }
 
-    const result = await sharp({
-      create: { width: W, height: H, channels: 4, background: { ...bg, alpha: 255 } },
-    }).composite(composites).png().toBuffer();
+    function resolveText(layer: any): string {
+      const raw = layer.text || "";
+      if (layer.name && variables[layer.name] !== undefined) return variables[layer.name]!;
+      return raw;
+    }
 
-    return new Response(new Uint8Array(result), { headers: { "Content-Type": "image/png" } });
+    // Collect fonts
+    const fontSet = new Map<string, number>();
+    layers.forEach((l: any) => {
+      if (l.type === "text" && l.visible !== false) {
+        let fam = (l.fontFamily || "Tajawal").split(",")[0]!.replace(/['"]/g, "").trim();
+        if (fam.includes(":")) fam = fam.split(":")[0]!;
+        fontSet.set(fam, 400);
+      }
+    });
+    const fontsData: any[] = [];
+    for (const [family, weight] of fontSet) {
+      const buf = await getFontBuffer(family, weight);
+      if (buf) fontsData.push({ name: family, data: buf, weight, style: "normal" as const });
+    }
+    if (fontsData.length === 0) {
+      const buf = await getFontBuffer("Tajawal", 400);
+      if (buf) fontsData.push({ name: "Tajawal", data: buf, weight: 400, style: "normal" as const });
+    }
+
+    const element = (
+      <div style={{ display: "flex", width: W, height: H, backgroundColor: canvas.background || "#fff", position: "relative", overflow: "hidden" }}>
+        {layers.filter((l: any) => l.visible !== false).map((layer: any) => {
+          const x = Math.round(layer.x ?? 0);
+          const y = Math.round(layer.y ?? 0);
+          const w = Math.round(layer.width ?? 100);
+          const h = Math.round(layer.height ?? 40);
+          const op = layer.opacity ?? 1;
+          const shadow = (layer.shadowOpacity > 0 && layer.shadowColor)
+            ? `${layer.shadowOffsetX||0}px ${layer.shadowOffsetY||0}px ${layer.shadowBlur||0}px ${hexRgba(layer.shadowColor, layer.shadowOpacity)}` : undefined;
+          const cr = `${layer.cornerRadius || 0}px`;
+
+          if (layer.type === "rect") return (
+            <div key={layer.id} style={{ display: "flex", position: "absolute", left: x, top: y, width: w, height: h,
+              backgroundColor: layer.fill || "#ccc", borderRadius: cr, ...(shadow ? { boxShadow: shadow } : {}), opacity: op }} />
+          );
+
+          if (layer.type === "image") {
+            const src = (layer.name && variables[layer.name]) ? variables[layer.name]! : (layer.src || "");
+            if (!src) return null;
+            return <img key={layer.id} src={src} style={{ position: "absolute", left: x, top: y, width: w, height: h,
+              opacity: op, borderRadius: cr, ...(shadow ? { boxShadow: shadow } : {}), objectFit: "cover" as const }} />;
+          }
+
+          if (layer.type === "text") {
+            const text = resolveText(layer);
+            const fontSize = layer.fontSize ?? 24;
+            let fam = (layer.fontFamily || "Tajawal").split(",")[0]!.replace(/['"]/g, "").trim();
+            if (fam.includes(":")) fam = fam.split(":")[0]!;
+            const isAr = /[\u0600-\u06FF]/.test(text);
+            const align = layer.align || (isAr ? "right" : "left");
+
+            return (
+              <div key={layer.id} dir={isAr ? "rtl" : "ltr"} style={{
+                display: "flex", position: "absolute", left: x, top: y, width: w, height: h,
+                color: layer.fill || "#000", fontSize, fontFamily: `"${fam}"`,
+                lineHeight: layer.lineHeight || 1.3,
+                letterSpacing: layer.letterSpacing ?? 0,
+                textAlign: align as any, opacity: op,
+                ...(shadow ? { textShadow: shadow } : {}),
+                overflow: "hidden", wordBreak: "break-word" as any,
+              }}>
+                {text}
+              </div>
+            );
+          }
+          return null;
+        })}
+      </div>
+    );
+
+    return new ImageResponse(element, { width: W, height: H, fonts: fontsData });
   } catch (err) {
     console.error("[GET /api/v1/image] Error:", err);
     return NextResponse.json({ error: "Failed", details: String(err) }, { status: 500 });
