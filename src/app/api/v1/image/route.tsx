@@ -108,9 +108,20 @@ export async function GET(request: NextRequest) {
     await page.evaluate(() => document.fonts.ready);
     await new Promise(r => setTimeout(r, 500));
 
+    const save = url.searchParams.get("save") === "true";
+
     const screenshot = await page.screenshot({ type: "png", clip: { x: 0, y: 0, width: W, height: H } });
     await browser.close();
     browser = null;
+
+    if (save) {
+      const { put } = await import("@vercel/blob");
+      const blob = await put(`rendered-${templateId}-${Date.now()}.png`, screenshot, {
+        access: "public",
+        contentType: "image/png",
+      });
+      return NextResponse.json({ url: blob.url });
+    }
 
     return new Response(new Uint8Array(screenshot), {
       headers: { "Content-Type": "image/png" },
