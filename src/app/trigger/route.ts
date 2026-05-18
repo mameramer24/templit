@@ -5,6 +5,8 @@ import { eq } from "drizzle-orm";
 import { validateApiAuth } from "@/lib/api-key-auth";
 import { z } from "zod";
 
+export const maxDuration = 60;
+
 const renderSchema = z.object({
   templateId: z.string().min(1),
   variables: z.record(z.string(), z.any()).optional(),
@@ -51,10 +53,27 @@ async function handleRender(request: NextRequest) {
 
     const renderId = `rnd_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
 
-    // Build the image URL with variables encoded as base64
     const varsBase64 = Buffer.from(JSON.stringify(variables ?? {})).toString("base64");
     const baseUrl = request.headers.get("origin") || request.headers.get("referer")?.split("/").slice(0, 3).join("/") || "https://templit-azure.vercel.app";
-    const imageUrl = `${baseUrl}/api/v1/image?templateId=${template.id}&vars=${encodeURIComponent(varsBase64)}`;
+    
+    // Call the image generation API internally with save=true
+    const renderUrl = `${baseUrl}/api/v1/image?templateId=${template.id}&vars=${encodeURIComponent(varsBase64)}&save=true`;
+    
+    let finalImageUrl = "";
+    try {
+      const renderRes = await fetch(renderUrl, { method: "GET" });
+      if (renderRes.ok) {
+        const renderData = await renderRes.json();
+        finalImageUrl = renderData.url;
+      } else {
+        const errText = await renderRes.text();
+        console.error("Render failed internally:", errText);
+        return NextResponse.json({ error: "Failed to generate image" }, { status: 500 });
+      }
+    } catch (e) {
+      console.error("Internal fetch error:", e);
+      return NextResponse.json({ error: "Internal error during rendering" }, { status: 500 });
+    }
 
     return NextResponse.json({
       success: true,
@@ -64,8 +83,8 @@ async function handleRender(request: NextRequest) {
         templateName: template.name,
         status: "ready",
         format,
-        imageUrl,
-        message: "Image rendered successfully. Use imageUrl to access the PNG.",
+        imageUrl: finalImageUrl,
+        message: "Image rendered successfully and saved to storage.",
       }
     }, { status: 201 });
 
